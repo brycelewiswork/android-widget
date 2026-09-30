@@ -1,0 +1,29 @@
+# pnpm settings (pnpm 11 reads config from here — not the package.json "pnpm"
+# field and not .npmrc).
+
+# Allow these packages to run install/build scripts — esbuild + SWC link the
+# native binaries Vite needs; msw is a transitive dep.
+allowBuilds:
+  '@swc/core': true
+  esbuild: true
+  msw: true
+
+# TypeScript is our type-check/build compiler and we want new releases without
+# waiting out the global minimumReleaseAge cooldown. Exclude the `typescript`
+# package and TS 7's platform-native binaries (`@typescript/typescript-*`) by
+# glob so `pnpm install` never stalls on a fresh TS release — version-agnostic,
+# so patch bumps keep working without re-listing every triple.
+minimumReleaseAgeExclude:
+  - typescript
+  - '@typescript/typescript-*'
+
+# Build a flat, npm-style node_modules (no .pnpm symlink layout). This template's
+# code assumes npm-style resolution and imports a few transitive deps directly
+# (e.g. `postprocessing`, `@types/three` via the three/drei stack). pnpm still
+# hardlinks every package from its global content-addressed store, so spawned
+# sketches share one copy on disk — the whole reason for using pnpm — they just
+# get a flat tree instead of the isolated one.
+nodeLinker: hoisted
+
+# Don't re-verify the dependency tree before each `pnpm run <script>`.
+verifyDepsBeforeRun: false
