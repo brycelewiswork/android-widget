@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { useTimelineStore } from "@/store/useTimelineStore"
 import { canTake, clockTime, nextShiftStart, remainingEvents, type NextShift } from "@/timeline/model"
 import { useWidgetStore, type Precision } from "@/store/useWidgetStore"
-import { MealIcon, PresetPicker, Segmented, ShiftControls, TimeOfDay } from "@/timeline/TimelinePage"
+import { EmptyNote, MealIcon, ResetButton, Segmented, ShiftControls, TimeOfDay } from "@/timeline/TimelinePage"
 import { DEFAULT_PAY_RATE, estimatedEarnings, liveStatus, liveWidget, type LiveStatus } from "./live"
 
 /*
@@ -65,21 +65,6 @@ function PrecisionSection() {
   )
 }
 
-/** A section's quiet reset; `label` names exactly what it resets, for screen readers. */
-function ResetLink({ onClick, disabled, label }: { onClick: () => void; disabled: boolean; label: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
-      className="cursor-pointer text-xs text-label-secondary hover:text-label disabled:cursor-default disabled:opacity-40 disabled:hover:text-label-secondary"
-    >
-      Reset
-    </button>
-  )
-}
-
 export function LivePanel() {
   const { config, take, clockIn, clockOut, endBreak, resetClock, resetTaken, setPayRate, setNextShift, openApp } = useTimelineStore()
   const shown = liveWidget(config).state
@@ -99,22 +84,19 @@ export function LivePanel() {
       aria-label="Live widget controls"
       className="border-t border-stroke-faint bg-surface-secondary lg:fixed lg:inset-y-0 lg:right-0 lg:z-20 lg:w-72 lg:overflow-y-auto lg:border-t-0 lg:border-l"
     >
-      <div className="px-5 pt-5">
-        <PresetPicker />
-      </div>
       {status.kind === "empty" ? (
-        <p className="px-5 py-5 text-sm text-label-secondary">No shift, so there's nothing to clock into.</p>
+        <EmptyNote>No shift, so there's nothing to clock into.</EmptyNote>
       ) : (
         <div className="flex flex-col gap-6 px-5 py-5">
           <TimeOfDay status={`${clockTime(config.shiftStart)} – ${clockTime(config.shiftEnd)} shift`} />
 
           <section className="flex flex-col gap-3 border-t border-stroke-faint pt-5">
-            <div className="flex items-baseline justify-between gap-2">
-              <div>
+            <div>
+              <div className="flex items-center gap-1.5">
                 <h2 className="text-sm font-semibold text-label">Clock</h2>
-                <p className="text-xs text-label-secondary">{statusLabel(status, config.clockIn)}</p>
+                <ResetButton onClick={resetClock} disabled={!clockTouched} label="Reset clock-in and out" />
               </div>
-              <ResetLink onClick={resetClock} disabled={!clockTouched} label="Reset clock-in and out" />
+              <p className="text-xs text-label-secondary">{statusLabel(status, config.clockIn)}</p>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -137,44 +119,13 @@ export function LivePanel() {
                 </Button>
               )}
             </div>
-            <div className="flex flex-col gap-1.5">
-              <p className="text-xs text-label-secondary">
-                Next shift
-                {next !== undefined && <span className="text-label-tertiary"> · {clockTime(next)}{next >= 24 * 60 ? " tomorrow" : ""}</span>}
-              </p>
-              <Segmented label="Next shift" options={NEXT_SHIFTS} value={config.nextShift ?? "none"} onChange={setNextShift} render={(n) => NEXT_SHIFT_LABEL[n]} />
-            </div>
-            <label className="flex items-center justify-between gap-3 text-xs text-label-secondary">
-              <span>
-                Pay rate
-                {status.kind === "out" && (
-                  <span className="text-label-tertiary">
-                    {" · earned "}
-                    {estimatedEarnings(config).toLocaleString("en-US", { style: "currency", currency: "USD" })}
-                  </span>
-                )}
-              </span>
-              <span className="flex h-8 w-24 items-center gap-1 rounded-lg bg-surface px-2.5 inset-ring-1 inset-ring-stroke-strong">
-                <span className="font-mono text-label-tertiary">$</span>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  step={0.5}
-                  value={config.payRate ?? DEFAULT_PAY_RATE}
-                  onChange={(e) => setPayRate(Math.max(0, Number(e.target.value) || 0))}
-                  className="min-w-0 flex-1 bg-transparent font-mono text-sm tabular-nums text-label outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-                />
-                <span className="font-mono text-label-tertiary">/h</span>
-              </span>
-            </label>
           </section>
 
           {/* Breaks and meals reset on their own, so trying them out again doesn't mean clocking back in. */}
           <section className="flex flex-col gap-3 border-t border-stroke-faint pt-5">
-            <div className="flex items-baseline justify-between gap-2">
+            <div className="flex items-center gap-1.5">
               <h2 className="text-sm font-semibold text-label">Today</h2>
-              <ResetLink onClick={resetTaken} disabled={!breaksTouched} label="Reset breaks and meals" />
+              <ResetButton onClick={resetTaken} disabled={!breaksTouched} label="Reset breaks and meals" />
             </div>
             <div className="flex flex-col gap-2">
               {status.kind === "working" &&
@@ -206,6 +157,41 @@ export function LivePanel() {
           <ShiftControls />
 
           <PrecisionSection />
+
+          {/* What happens after clocking out: the earnings shown, and what comes next. */}
+          <section className="flex flex-col gap-3 border-t border-stroke-faint pt-5">
+              <div className="flex flex-col gap-1.5">
+                <p className="text-xs text-label-secondary">
+                  Next shift
+                  {next !== undefined && <span className="text-label-tertiary"> · {clockTime(next)}{next >= 24 * 60 ? " tomorrow" : ""}</span>}
+                </p>
+                <Segmented label="Next shift" options={NEXT_SHIFTS} value={config.nextShift ?? "none"} onChange={setNextShift} render={(n) => NEXT_SHIFT_LABEL[n]} />
+              </div>
+              <label className="flex items-center justify-between gap-3 text-xs text-label-secondary">
+                <span>
+                  Pay rate
+                  {status.kind === "out" && (
+                    <span className="text-label-tertiary">
+                      {" · earned "}
+                      {estimatedEarnings(config).toLocaleString("en-US", { style: "currency", currency: "USD" })}
+                    </span>
+                  )}
+                </span>
+                <span className="flex h-8 w-24 items-center gap-1 rounded-lg bg-surface px-2.5 inset-ring-1 inset-ring-stroke-strong">
+                  <span className="font-mono text-label-tertiary">$</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step={0.5}
+                    value={config.payRate ?? DEFAULT_PAY_RATE}
+                    onChange={(e) => setPayRate(Math.max(0, Number(e.target.value) || 0))}
+                    className="min-w-0 flex-1 bg-transparent font-mono text-sm tabular-nums text-label outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <span className="font-mono text-label-tertiary">/h</span>
+                </span>
+              </label>
+          </section>
         </div>
       )}
     </aside>

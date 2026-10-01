@@ -1,5 +1,6 @@
 import {
   IconCoffee,
+  IconRotate,
   IconPlayerPauseFilled,
   IconPlayerPlayFilled,
   IconPlus,
@@ -18,12 +19,10 @@ import {
   clockTime,
   crowdedEvents,
   phaseOf,
-  PRESETS,
   remainingEvents,
   sortedEvents,
   takenEvents,
   type Phase,
-  type PresetId,
   type TimelineConfig,
 } from "./model"
 import { ShiftTimeline } from "./ShiftTimeline"
@@ -35,7 +34,6 @@ import { ShiftTimelineV2 } from "./ShiftTimelineV2"
  * the shift, and its breaks and meals.
  */
 
-const PRESET_IDS = PRESETS.map((p) => p.id)
 
 // ── What the widgets show for a timeline phase ─────────────────────────────
 
@@ -124,7 +122,7 @@ export function Segmented<T extends string | number>({ label, options, value, on
   )
 }
 
-/** Time of day: readout, scrubber, play / static and speed. Shared with the widget pages' live panel. */
+/** Time of day: readout, scrubber, play and speed. Shared with the widget pages' live panel. */
 export function TimeOfDay({ status }: { status: string }) {
   const { config, running, speed, setNow, setRunning, setSpeed } = useTimelineStore()
   const min = config.shiftStart - SCRUB_PAD_MINUTES
@@ -144,7 +142,9 @@ export function TimeOfDay({ status }: { status: string }) {
         max={max}
         step={1}
         onValueChange={([v]) => setNow(v)}
-        aria-label="Time of day"
+        getAriaLabel={() => "Time of day"}
+        getAriaValueText={(_, v) => clockTime(v)}
+        size="lg"
       />
       <div className="flex justify-between font-mono text-xs text-label-tertiary">
         <span>{clockTime(min)}</span>
@@ -154,9 +154,6 @@ export function TimeOfDay({ status }: { status: string }) {
         <Button className="flex-1" onClick={() => setRunning(!running)}>
           {running ? <IconPlayerPauseFilled /> : <IconPlayerPlayFilled />}
           {running ? "Pause" : "Play"}
-        </Button>
-        <Button variant="outline" onClick={() => setNow(null)} disabled={config.now === null}>
-          Static
         </Button>
       </div>
       <Segmented label="Speed" options={SPEEDS.slice(1)} value={speed} onChange={setSpeed} render={(s) => `${s}×`} />
@@ -243,11 +240,32 @@ export function ShiftControls() {
   )
 }
 
-/** Planned 9-to-5 / Empty, for pages whose left rail is taken. */
-export function PresetPicker() {
-  const { preset, applyPreset } = useTimelineStore()
+/** A section's reset, as an icon beside its heading; `label` names exactly what it resets. */
+export function ResetButton({ onClick, disabled, label }: { onClick: () => void; disabled: boolean; label: string }) {
   return (
-    <Segmented label="Timeline preset" options={PRESET_IDS} value={preset ?? ("" as PresetId)} onChange={applyPreset} render={(id) => PRESETS.find((p) => p.id === id)!.label} />
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className="flex size-5 cursor-pointer items-center justify-center rounded-md text-label-tertiary hover:bg-fill-quaternary hover:text-label disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-label-tertiary"
+    >
+      <IconRotate size={14} stroke={2} />
+    </button>
+  )
+}
+
+/** Shown in place of the controls when the timeline is the Empty preset (no shift): the way back. */
+export function EmptyNote({ children }: { children: string }) {
+  const applyPreset = useTimelineStore((s) => s.applyPreset)
+  return (
+    <div className="flex flex-col items-start gap-3 px-5 py-5">
+      <p className="text-sm text-label-secondary">{children}</p>
+      <Button variant="outline" onClick={() => applyPreset("planned")}>
+        Use the planned 9-to-5
+      </Button>
+    </div>
   )
 }
 
@@ -265,11 +283,7 @@ function TimelinePanel() {
         aria-label="Timeline controls"
         className="border-t border-stroke-faint bg-surface-secondary lg:fixed lg:inset-y-0 lg:right-0 lg:z-20 lg:w-72 lg:border-t-0 lg:border-l"
       >
-        {/* The presets moved here from the old left rail. */}
-        <div className="px-5 pt-5">
-          <PresetPicker />
-        </div>
-        <p className="px-5 py-5 text-sm text-label-secondary">No shift, so there's no time of day to move through.</p>
+        <EmptyNote>No shift, so there's no time of day to move through.</EmptyNote>
       </aside>
     )
   }
@@ -280,20 +294,12 @@ function TimelinePanel() {
       className="border-t border-stroke-faint bg-surface-secondary lg:fixed lg:inset-y-0 lg:right-0 lg:z-20 lg:w-72 lg:overflow-y-auto lg:border-t-0 lg:border-l"
     >
       <div className="flex flex-col gap-6 px-5 py-5">
-        <PresetPicker />
         <TimeOfDay status={phaseLabel(phase)} />
 
         <section className="flex flex-col gap-3 border-t border-stroke-faint pt-5">
-          <div className="flex items-baseline justify-between gap-2">
+          <div className="flex items-center gap-1.5">
             <h2 className="text-sm font-semibold text-label">Today</h2>
-            <button
-              type="button"
-              onClick={resetTaken}
-              disabled={takenCount === 0}
-              className="cursor-pointer text-xs text-label-secondary hover:text-label disabled:cursor-default disabled:opacity-40 disabled:hover:text-label-secondary"
-            >
-              Reset
-            </button>
+            <ResetButton onClick={resetTaken} disabled={takenCount === 0} label="Reset breaks and meals" />
           </div>
           <div className="flex flex-col gap-2">
             {(["break", "meal"] as const).map((kind) => (

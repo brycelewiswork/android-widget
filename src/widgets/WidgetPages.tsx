@@ -14,7 +14,7 @@ import { demoTimeline, FLOWS } from "./flows"
 import { WIDGET_STATES, type WidgetStateId } from "./states"
 import { useRotatingSubtitle, useSubtitleDriver } from "./subtitles"
 import { Widget } from "./Widget"
-import { FIGMA_FILE_URL, WIDGET_SIZES, WIDGET_SIZE_ORDER, sizeLabel, type WidgetSize } from "./sizes"
+import { WIDGET_SIZES, WIDGET_SIZE_ORDER, sizeLabel, type WidgetSize } from "./sizes"
 
 // Home-screen placement inside the 410dp-wide screen. Widgets hug the launcher
 // grid's side margin — (410 − 395) / 2 — and stack below the 52dp status bar.
@@ -191,23 +191,12 @@ function StateDocs({ size }: { size: WidgetSize }) {
 }
 
 export function WidgetSizePage({ size }: { size: WidgetSize }) {
-  const { figmaNode } = WIDGET_SIZES[size]
   useLiveSubtitleDriver()
   return (
     <Page sizes={[size]} panel={<LivePanel />}>
       {/* The live widget, centred left to right in the canvas; the collapsed States header follows right under it. */}
       <section className="mb-[var(--space-l-xl)] flex flex-col items-center gap-3">
-        <div className="flex items-baseline gap-3">
-          <h1 className="text-sm font-semibold text-label">{sizeLabel(size)} widget</h1>
-          <a
-            href={`${FIGMA_FILE_URL}?node-id=${figmaNode.replace(":", "-")}`}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm text-label-secondary hover:text-label"
-          >
-            Open in Figma
-          </a>
-        </div>
+        <h1 className="text-sm font-semibold text-label">{sizeLabel(size)} widget</h1>
         <SizeCheck size={size}>
           <LiveSpecimen size={size} />
         </SizeCheck>
