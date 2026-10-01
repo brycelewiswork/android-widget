@@ -10,8 +10,8 @@ import { useWidgetStore } from "@/store/useWidgetStore"
 import { liveWidget } from "./live"
 import { LivePanel } from "./LivePanel"
 import { Page } from "./Shell"
-import { demoTimeline, FLOWS } from "./flows"
-import { WIDGET_STATES, type WidgetStateId } from "./states"
+import { demoTimeline, FLOWS, type FlowStep } from "./flows"
+import { WIDGET_STATES } from "./states"
 import { useRotatingSubtitle, useSubtitleDriver } from "./subtitles"
 import { Widget } from "./Widget"
 import { WIDGET_SIZES, WIDGET_SIZE_ORDER, sizeLabel, type WidgetSize } from "./sizes"
@@ -83,7 +83,7 @@ export function AllWidgetsPage() {
 
 /** The widget as the worker lives it: driven by the time of day, clocking in and out, and breaks (right rail). */
 function LiveSpecimen({ size }: { size: WidgetSize }) {
-  const { fidelity, showBounds, precision } = useWidgetStore()
+  const { fidelity, showBounds, precision, busy } = useWidgetStore()
   const config = useTimelineStore((s) => s.config)
   const live = liveWidget(config, precision)
   const sub = useRotatingSubtitle(live.state)
@@ -93,7 +93,7 @@ function LiveSpecimen({ size }: { size: WidgetSize }) {
       state={live.state}
       minutes={live.minutes}
       sub={sub}
-      copy={live.copy}
+      copy={busy ? { ...live.copy, busy } : live.copy}
       timeline={live.timeline}
       fidelity={fidelity}
       showBounds={showBounds}
@@ -133,12 +133,13 @@ function SizeCheck({ size, children }: { size: WidgetSize; children: ReactNode }
 }
 
 /** One state in a flow: its name above the widget, at the state's default copy and on its own day's timeline. */
-function FlowStepCard({ size, state }: { size: WidgetSize; state: WidgetStateId }) {
+function FlowStepCard({ size, step }: { size: WidgetSize; step: FlowStep }) {
   const { fidelity, showBounds } = useWidgetStore()
+  const { state } = step
   return (
     <figure className="flex flex-col gap-2">
-      <figcaption className="text-sm font-medium text-label">{WIDGET_STATES.find((s) => s.id === state)?.label}</figcaption>
-      <Widget size={size} state={state} timeline={demoTimeline(state)} fidelity={fidelity} showBounds={showBounds} />
+      <figcaption className="text-sm font-medium text-label">{step.label ?? WIDGET_STATES.find((s) => s.id === state)?.label}</figcaption>
+      <Widget size={size} state={state} copy={step.copy} timeline={demoTimeline(state)} fidelity={fidelity} showBounds={showBounds} />
     </figure>
   )
 }
@@ -180,7 +181,7 @@ function StateDocs({ size }: { size: WidgetSize }) {
               <li key={i} className="flex items-start">
                 {i > 0 && flow.arrows !== false && <FlowArrow via={step.via} />}
                 {i > 0 && flow.arrows !== false && <span className="sr-only">then, after {step.via}: </span>}
-                <FlowStepCard size={size} state={step.state} />
+                <FlowStepCard size={size} step={step} />
               </li>
             ))}
           </ol>

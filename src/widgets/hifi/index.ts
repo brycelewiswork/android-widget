@@ -9,7 +9,7 @@ export type WidgetLayout = (props: { content: StateContent }) => ReactNode
 /*
  * Hi-fi layouts, registered one size at a time. Build each as its own
  * component in this folder (same `WidgetLayout` signature as the wireframes,
- * so all ten states come for free) and add it here. A size without an entry
+ * so all eleven states come for free) and add it here. A size without an entry
  * falls back to its wireframe so every page keeps rendering.
  */
 export const HIFI: Partial<Record<WidgetSize, WidgetLayout>> = {}

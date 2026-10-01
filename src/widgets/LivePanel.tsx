@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { useTimelineStore } from "@/store/useTimelineStore"
 import { canTake, clockTime, nextShiftStart, remainingEvents, type NextShift } from "@/timeline/model"
 import { useWidgetStore, type Precision } from "@/store/useWidgetStore"
+import type { IconName } from "./states"
 import { EmptyNote, MealIcon, ResetButton, Segmented, ShiftControls, TimeOfDay } from "@/timeline/TimelinePage"
 import { DEFAULT_PAY_RATE, estimatedEarnings, liveStatus, liveWidget, type LiveStatus } from "./live"
 
@@ -26,8 +27,11 @@ function statusLabel(status: LiveStatus, clockIn?: number) {
   }
 }
 
-const NEXT_SHIFTS: readonly NextShift[] = ["none", "soon", "tomorrow"]
-const NEXT_SHIFT_LABEL: Record<NextShift, string> = { none: "None", soon: "In 1.5h", tomorrow: "Tomorrow" }
+/** How long a tapped widget button spins before its action lands (a server round trip). */
+const PENDING_MS = 900
+
+const NEXT_SHIFTS: readonly NextShift[] = ["none", "soon", "tomorrow", "later"]
+const NEXT_SHIFT_LABEL: Record<NextShift, string> = { none: "None", soon: "In 1.5h", tomorrow: "Tomorrow", later: "In 3 days" }
 
 const PRECISIONS: readonly Precision[] = ["exact", "calm"]
 const PRECISION_NOTE: Record<Precision, string> = {
@@ -66,7 +70,21 @@ function PrecisionSection() {
 }
 
 export function LivePanel() {
-  const { config, take, clockIn, clockOut, endBreak, resetClock, resetTaken, setPayRate, setNextShift, openApp } = useTimelineStore()
+  const store = useTimelineStore()
+  const { config, resetClock, resetTaken, setPayRate, setNextShift, setOffline, openApp } = store
+  const { busy, setBusy } = useWidgetStore()
+  // A tap on the widget waits on the server: its button spins, then the action lands.
+  const pending = (icon: IconName, act: () => void) => () => {
+    setBusy(icon)
+    window.setTimeout(() => {
+      act()
+      setBusy(null)
+    }, PENDING_MS)
+  }
+  const clockIn = pending("timeclock", store.clockIn)
+  const clockOut = pending("timeclock", store.clockOut)
+  const endBreak = pending("timeclock", store.endBreak)
+  const take = (kind: "break" | "meal") => pending(kind === "meal" ? "meal" : "coffee", () => store.take(kind))()
   const shown = liveWidget(config).state
   const celebrating = shown === "shift-done"
   // Once the shift's end takes over the widget, Clock out is the one action (it ends the break too).
@@ -101,7 +119,7 @@ export function LivePanel() {
 
             <div className="flex flex-col gap-2">
               {(status.kind === "off" || status.kind === "out") && (
-                <Button onClick={clockIn} className="justify-start">
+                <Button onClick={clockIn} disabled={!!busy} className="justify-start">
                   <IconClockPlay />
                   Clock in
                 </Button>
@@ -113,7 +131,7 @@ export function LivePanel() {
                 </Button>
               )}
               {(status.kind === "working" || status.kind === "break") && (
-                <Button variant={status.kind === "break" && shiftEndShowing ? "default" : "outline"} onClick={clockOut} className="justify-start">
+                <Button variant={status.kind === "break" && shiftEndShowing ? "default" : "outline"} onClick={clockOut} disabled={!!busy} className="justify-start">
                   <IconClockStop />
                   Clock out
                 </Button>
@@ -130,14 +148,14 @@ export function LivePanel() {
             <div className="flex flex-col gap-2">
               {status.kind === "working" &&
                 (["break", "meal"] as const).map((kind) => (
-                  <Button key={kind} onClick={() => take(kind)} disabled={!inShift || left[kind] === 0} className="justify-start">
+                  <Button key={kind} onClick={() => take(kind)} disabled={!!busy || !inShift || left[kind] === 0} className="justify-start">
                     {kind === "break" ? <IconCoffee /> : <MealIcon size={16} />}
                     <span className="flex-1 text-left">{kind === "break" ? "Take a break" : "Take a meal"}</span>
                     <span className="font-mono tabular-nums opacity-60">{left[kind]} left</span>
                   </Button>
                 ))}
               {status.kind === "break" && !shiftEndShowing && (
-                <Button onClick={endBreak} className="justify-start">
+                <Button onClick={endBreak} disabled={!!busy} className="justify-start">
                   <IconPlayerStopFilled />
                   {status.meal ? "End meal" : "End break"}
                 </Button>
@@ -162,8 +180,27 @@ export function LivePanel() {
           <section className="flex flex-col gap-3 border-t border-stroke-faint pt-5">
               <div className="flex flex-col gap-1.5">
                 <p className="text-xs text-label-secondary">
+                  Connection
+                  {config.offlineAt !== undefined && <span className="text-label-tertiary"> · lost at {clockTime(config.offlineAt)}</span>}
+                </p>
+                <Segmented
+                  label="Connection"
+                  options={["online", "offline"] as const}
+                  value={config.offlineAt === undefined ? "online" : "offline"}
+                  onChange={(v) => setOffline(v === "offline")}
+                  render={(v) => (v === "online" ? "Online" : "Offline")}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <p className="text-xs text-label-secondary">
                   Next shift
-                  {next !== undefined && <span className="text-label-tertiary"> · {clockTime(next)}{next >= 24 * 60 ? " tomorrow" : ""}</span>}
+                  {next !== undefined && (
+                    <span className="text-label-tertiary">
+                      {" · "}
+                      {clockTime(next)}
+                      {next >= 2 * 24 * 60 ? " in 3 days" : next >= 24 * 60 ? " tomorrow" : ""}
+                    </span>
+                  )}
                 </p>
                 <Segmented label="Next shift" options={NEXT_SHIFTS} value={config.nextShift ?? "none"} onChange={setNextShift} render={(n) => NEXT_SHIFT_LABEL[n]} />
               </div>

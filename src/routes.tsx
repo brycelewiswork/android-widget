@@ -1,4 +1,5 @@
 import {
+  IconListCheck,
   IconHome,
   IconBounceRight,
   IconTypography,
@@ -23,6 +24,7 @@ import {
 import { lazy } from "react"
 import { AllWidgetsPage, Widget2x2Page, Widget4x1Page, Widget4x2Page, Widget4x3Page } from "@/widgets/WidgetPages"
 import { TimelinePage, TimelineV2Page } from "@/timeline/TimelinePage"
+import { QuestionsPage } from "@/widgets/QuestionsPage"
 
 // Home stays eager so the landing route paints instantly. Every other page is
 // code-split into its own chunk and only fetched when its route is visited —
@@ -80,6 +82,7 @@ export const ROUTES: RouteEntry[] = [
   { path: "/4x3",         label: "4 × 3",   icon: IconLayoutCards,     Component: Widget4x3Page },
   { path: "/timeline",    label: "Timeline", icon: IconClockHour4,     Component: TimelinePage },
   { path: "/timeline-2",  label: "Timeline 2", icon: IconClockHour4,   Component: TimelineV2Page },
+  { path: "/questions",   label: "Decisions", icon: IconListCheck, Component: QuestionsPage },
   { path: "/demos",       label: "Demos",   icon: IconSparkles,        system: true, Component: Demos },
   { path: "/colors",      label: "Color",   icon: IconPalette,         system: true, Component: Colors },
   { path: "/foundations", label: "Fluid",   icon: IconStack2,          system: true, Component: Foundations },

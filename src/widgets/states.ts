@@ -1,7 +1,7 @@
 import type { WidgetSize } from "./sizes"
 
 /*
- * The ten states every widget can be in, and the content each one shows.
+ * The eleven states every widget can be in, and the content each one shows.
  * One content model feeds every size; each size's layout picks the slots it
  * has room for (2×2: headline + primary; 4×1: headline + compact button;
  * 4×2: + timeline + secondary; 4×3: + schedule). Edit copy here.
@@ -18,6 +18,7 @@ export const WIDGET_STATES = [
   { id: "ending", label: "Shift ending soon" },
   { id: "overtime", label: "Past shift end" },
   { id: "shift-done", label: "Shift complete" },
+  { id: "off", label: "Between shifts" },
 ] as const
 
 export type WidgetStateId = (typeof WIDGET_STATES)[number]["id"]
@@ -50,8 +51,9 @@ export type StateContent = {
   /** The 2×2 shows it icon-only; the 4×2 / 4×3 as a small icon-only square at the row's start. */
   secondary?: Action
   /**
-   * 4×2 / 4×3: a second action between the secondary and the primary, the same
-   * size as the primary but not black — on the clock, Take meal beside Take break.
+   * A second action beside the primary, not black — on the clock, Take meal
+   * beside Take break. The 4×2 / 4×3 put it between the secondary and the
+   * primary; the 2×2 shows it in the secondary's slot instead.
    */
   alt?: Action
   /** The 4×1's single square button. */
@@ -76,6 +78,8 @@ export type StateContent = {
    * text for anything that just wants a string.
    */
   ticker?: { slot: "value" | "trail"; minutes: number; format: (minutes: number) => string }
+  /** The button (by its icon) waiting on the server after a tap: it shows a spinner in place of its icon. */
+  busy?: IconName
 }
 
 // ── Time ───────────────────────────────────────────────────────────────────
@@ -198,7 +202,8 @@ const STATES: Record<WidgetStateId, StateDef> = {
     compact: "coffee",
     schedule: SCHEDULE,
     sizes: {
-      "2x2": { lead: "On the clock", value: "6h 12m" },
+      // Take meal takes Message's slot beside Take break (Wireframe2x2 shows `alt` there).
+      "2x2": { lead: "On the clock", value: "6h 12m", alt: TAKE_MEAL },
       // No "for": beside the buttons, "On the clock for 15h 59m" wraps. Break and
       // meal as two icon buttons (the live widget drops one once it's used up).
       "4x1": { lead: "On the clock", compactStyle: "pair", compactIcons: ["meal", "coffee"] },
@@ -218,7 +223,7 @@ const STATES: Record<WidgetStateId, StateDef> = {
     secondary: MESSAGE,
     compact: "coffee",
     schedule: SCHEDULE,
-    sizes: { ...WIDE_ON_CLOCK, "4x1": { compactStyle: "pair", compactIcons: ["meal", "coffee"] } },
+    sizes: { ...WIDE_ON_CLOCK, "2x2": { alt: TAKE_MEAL }, "4x1": { compactStyle: "pair", compactIcons: ["meal", "coffee"] } },
   },
   break: {
     lead: "Break ends in",
@@ -262,6 +267,22 @@ const STATES: Record<WidgetStateId, StateDef> = {
     schedule: SCHEDULE,
     sizes: { ...WIDE_MESSAGE, "4x1": { compactStyle: "primary" } },
     time: timed("value", formatElapsed),
+  },
+  // Between shifts — most of the time this widget is on someone's phone. Calm,
+  // no countdown: when they're next on, without a clock ticking toward it. The
+  // countdown ("Next shift in 2h") takes over on the day of the shift itself.
+  off: {
+    lead: "Off until tomorrow",
+    value: "",
+    sub: "Next shift at 9 am",
+    timeline: true,
+    primary: { icon: "calendar", label: "View Schedule" },
+    compact: "calendar",
+    schedule: SCHEDULE,
+    sizes: {
+      "2x2": { primary: { icon: "calendar", label: "Schedule" } },
+      "4x1": { compactStyle: "primary", primary: { icon: "calendar", label: "Schedule" } },
+    },
   },
   "shift-done": {
     lead: "Nice work today! 🎉",

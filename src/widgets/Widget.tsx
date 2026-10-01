@@ -1,5 +1,5 @@
 import { createContext, useContext, type CSSProperties, type ReactNode } from "react"
-import { IconCalendar, IconLogin2 } from "@tabler/icons-react"
+import { IconCalendar, IconLoader2, IconLogin2 } from "@tabler/icons-react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { AnimatedNumber } from "@/components/ui/animated-number"
 import { DURATION, EASE, SPRING_FAST } from "@/lib/motion"
@@ -262,6 +262,17 @@ const BUTTON_BEAT = DURATION.normal + DURATION.fast * 0.75
 /** How long after a timeline change the buttons still count it as theirs to follow. */
 const BEAT_WINDOW_MS = 900
 const ButtonDelay = createContext(0)
+/** The button (by icon) waiting on the server — see StateContent.busy. */
+const Busy = createContext<IconName | undefined>(undefined)
+
+/** A spinner in an icon's place while its button waits on the server. */
+function Spinner({ tone, box }: { tone: Tone; box: number }) {
+  return (
+    <span className="absolute inset-0 flex items-center justify-center" role="status" aria-label="Working">
+      <IconLoader2 size={Math.min(22, box - 2)} stroke={2} className="animate-spin" style={{ color: TONE_COLOR[tone] }} />
+    </span>
+  )
+}
 
 /** The same transition(s), `delay` seconds later. Takes one transition or a per-property map. */
 function later<T extends object>(t: T, delay: number): T {
@@ -273,18 +284,19 @@ function later<T extends object>(t: T, delay: number): T {
 /** An icon swapping for another (Clock In → Take break): the same light blur crossfade as the text. */
 function SwapIcon({ name, tone }: { name: IconName; tone: Tone }) {
   const delay = useContext(ButtonDelay)
+  const busy = useContext(Busy) === name
   const box = ICONS[name].box
   return (
     <span className="relative block shrink-0" style={{ width: box, height: box }}>
       <AnimatePresence initial={false}>
         <motion.span
-          key={`${name}-${tone}`}
+          key={busy ? "busy" : `${name}-${tone}`}
           className="absolute inset-0 flex items-center justify-center"
           initial={{ opacity: 0, filter: `blur(${TEXT_BLUR}px)`, transform: "scale(0.6)" }}
           animate={{ opacity: 1, filter: "blur(0px)", transform: "scale(1)", transition: later(TEXT_IN, delay) }}
           exit={{ opacity: 0, filter: `blur(${TEXT_BLUR}px)`, transform: "scale(0.6)", transition: later(TEXT_OUT, delay) }}
         >
-          <Icon name={name} tone={tone} />
+          {busy ? <Spinner tone={tone} box={box} /> : <Icon name={name} tone={tone} />}
         </motion.span>
       </AnimatePresence>
     </span>
@@ -422,7 +434,7 @@ function CompactButton({ icon, dark }: { icon: IconName; dark?: boolean }) {
     >
       {!loading && (
         <span className="relative -top-[0.46px] -left-[0.46px]">
-          <Icon name={icon} tone={dark ? "light" : "dark"} />
+          <SwapIcon name={icon} tone={dark ? "light" : "dark"} />
         </span>
       )}
     </div>
@@ -515,9 +527,10 @@ function Wireframe2x2({ content: c }: { content: StateContent }) {
         <Headline content={c} size={22} wrap />
         <Subline size={13.5}>{c.sub}</Subline>
       </div>
-      {/* Two 79px icon slots; alone, the primary spans both, labelled. */}
+      {/* Two 79px icon slots; alone, the primary spans both, labelled. A second action
+          (on the clock, Take meal) takes the secondary's slot when there is one. */}
       <ButtonRow
-        c={c}
+        c={c.alt ? { ...c, secondary: c.alt } : c}
         className="left-3 top-[154px]"
         width={164}
         solo={{ left: 0, width: 164 }}
@@ -638,12 +651,14 @@ export function Widget({
       aria-busy={content.loading || undefined}
     >
       <Loading.Provider value={!!content.loading}>
+        <Busy.Provider value={content.busy}>
         <Timeline.Provider value={timeline}>
           <TimelineVersion.Provider value={timelineVersion}>
             {/* Not remounted on a state switch, so its text can blur from one state's copy to the next. */}
             <Layout content={content} />
           </TimelineVersion.Provider>
         </Timeline.Provider>
+        </Busy.Provider>
       </Loading.Provider>
     </div>
   )

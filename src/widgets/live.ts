@@ -155,6 +155,27 @@ function onClockActions(config: TimelineConfig, meal = false): Partial<StateCont
   return { primary: take[kinds[0]], alt: kinds[1] ? take[kinds[1]] : undefined }
 }
 
+const DAY_MINUTES = 24 * 60
+
+/**
+ * The next shift, seen from between shifts. On its own day it's the countdown
+ * ("Next shift in 2h at 9 am"); before that, no clock ticking toward it — just
+ * when they're next on: "Off until tomorrow" / "Off until Sunday", "Next shift at 9 am".
+ */
+function nextShiftWidget(config: TimelineConfig, next: number, now: number, calm: boolean): LiveWidget {
+  // The next shift's own day, on its plan: nothing elapsed or taken yet.
+  const timeline = { ...config, now: null, taken: {}, breakEnds: {}, clockIn: undefined, clockOut: undefined, complete: undefined }
+  const days = Math.floor(next / DAY_MINUTES) - Math.floor(now / DAY_MINUTES)
+  if (days <= 0) {
+    const minutes = Math.ceil(next - now)
+    return { state: "upcoming", minutes: calm ? calmUntil(minutes) : minutes, copy: { trail: `at ${shortTime(next)}` }, timeline }
+  }
+  const day = new Date()
+  day.setDate(day.getDate() + days)
+  const until = days === 1 ? "tomorrow" : day.toLocaleDateString("en-US", { weekday: "long" })
+  return { state: "off", copy: { lead: `Off until ${until}`, sub: `Next shift at ${shortTime(next)}` }, timeline }
+}
+
 /** 540 → "9 am", 570 → "9:30 am" — the headline's start time. */
 const shortTime = (minutes: number) => clockTime(minutes).replace(":00", "")
 
@@ -166,7 +187,18 @@ export type LiveWidget = {
   timeline: TimelineConfig
 }
 
+/**
+ * What the live widget shows. Offline (`config.offlineAt`), it still runs on
+ * what it last knew, but the subtitle says so: "Offline · updated 9:41 am".
+ */
 export function liveWidget(config: TimelineConfig, precision: Precision = "exact"): LiveWidget {
+  const live = liveWidgetOnline(config, precision)
+  const { offlineAt, now } = config
+  if (offlineAt === undefined || now === null || now < offlineAt || config.empty) return live
+  return { ...live, copy: { ...live.copy, sub: `Offline · updated ${clockTime(offlineAt)}` } }
+}
+
+function liveWidgetOnline(config: TimelineConfig, precision: Precision): LiveWidget {
   const calm = precision === "calm"
   const status = liveStatus(config)
   const now = config.now ?? config.shiftStart
@@ -190,17 +222,8 @@ export function liveWidget(config: TimelineConfig, precision: Precision = "exact
           timeline: { ...config, now: out, complete: true },
         }
       }
-      // Then what's next: the next shift's countdown, or nothing scheduled.
-      if (next !== undefined && next > now) {
-        const minutes = Math.ceil(next - now)
-        return {
-          state: "upcoming",
-          minutes: calm ? calmUntil(minutes) : minutes,
-          copy: { trail: `at ${shortTime(next)}` },
-          // Its own day: the plan, nothing elapsed or taken yet.
-          timeline: { ...config, now: null, taken: {}, clockIn: undefined, clockOut: undefined },
-        }
-      }
+      // Then what's next: between shifts until the next one's day, then its countdown — or nothing scheduled.
+      if (next !== undefined && next > now) return nextShiftWidget(config, next, now, calm)
       return { state: "no-shifts", timeline: { ...config, now: out } }
     }
     case "off": {

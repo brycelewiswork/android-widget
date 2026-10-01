@@ -1,5 +1,5 @@
 import { presetConfig, type TimelineConfig } from "@/timeline/model"
-import { WIDGET_STATES, type WidgetStateId } from "./states"
+import { WIDGET_STATES, type StateContent, type WidgetStateId } from "./states"
 
 /*
  * The paths a worker takes through the widget's states, for the size pages'
@@ -8,7 +8,14 @@ import { WIDGET_STATES, type WidgetStateId } from "./states"
  * just the reference set.
  */
 
-export type FlowStep = { state: WidgetStateId; via?: string }
+export type FlowStep = {
+  state: WidgetStateId
+  via?: string
+  /** Shown above the widget in place of the state's name (a variant, like offline). */
+  label?: string
+  /** Copy on top of the state's default (the offline subtitle). */
+  copy?: Partial<StateContent>
+}
 export type Flow = { id: string; label: string; note: string; steps: readonly FlowStep[]; arrows?: boolean }
 
 export const FLOWS: readonly Flow[] = [
@@ -23,6 +30,18 @@ export const FLOWS: readonly Flow[] = [
       { state: "clocked-in", via: "End break" },
       { state: "ending", via: "Last hour" },
       { state: "shift-done", via: "Clock out" },
+      { state: "off", via: "An hour later" },
+    ],
+  },
+  {
+    id: "between",
+    label: "Between shifts",
+    note: "Where the widget spends most of its time: calm until the day of the next shift, then counting down to it.",
+    steps: [
+      { state: "shift-done" },
+      { state: "off", via: "An hour later" },
+      { state: "upcoming", via: "Day of the shift" },
+      { state: "clocked-in", via: "Clock in" },
     ],
   },
   {
@@ -44,6 +63,21 @@ export const FLOWS: readonly Flow[] = [
       { state: "ending" },
       { state: "overtime", via: "Shift end passes" },
       { state: "shift-done", via: "Clock out" },
+    ],
+  },
+  {
+    id: "offline",
+    label: "Offline",
+    note: "No connection: the widget keeps showing what it last knew, and the subtitle says since when. Any state can be offline.",
+    steps: [
+      { state: "clocked-in" },
+      {
+        state: "clocked-in",
+        via: "Connection lost",
+        label: "On the clock, offline",
+        copy: { sub: "Offline · updated 3:12 pm" },
+      },
+      { state: "clocked-in", via: "Back online" },
     ],
   },
   {

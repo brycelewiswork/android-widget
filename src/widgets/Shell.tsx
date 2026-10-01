@@ -20,6 +20,7 @@ const TABS = [
   ...WIDGET_SIZE_ORDER.map((size) => ({ to: `/${size}`, label: sizeLabel(size) })),
   { to: "/timeline", label: "Timeline" },
   { to: "/timeline-2", label: "Timeline 2" },
+  { to: "/questions", label: "Decisions" },
 ]
 
 const segment = (active: boolean) =>
@@ -92,13 +93,13 @@ function FallbackNote({ sizes }: { sizes: WidgetSize[] }) {
 export function Page({ sizes, children, panel }: {
   sizes: WidgetSize[]
   children: ReactNode
-  /** The pinned right rail of controls. */
-  panel: ReactNode
+  /** The pinned right rail of controls, if the page has one. */
+  panel?: ReactNode
 }) {
   useTimelineDriver()
   return (
     <div className="min-h-svh">
-      <div className="flex min-h-svh flex-col lg:pr-72">
+      <div className={`flex min-h-svh flex-col ${panel ? "lg:pr-72" : ""}`}>
         <TopBar />
         <main className="widget-canvas flex-1 px-4 py-[var(--space-m-l)] md:px-[var(--space-m-l)]">
           <FallbackNote sizes={sizes} />

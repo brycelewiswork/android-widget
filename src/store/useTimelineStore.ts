@@ -53,6 +53,8 @@ type TimelineState = {
   resetClock: () => void
   setPayRate: (payRate: number) => void
   setNextShift: (nextShift: NextShift) => void
+  /** Live widget: lose (or get back) the connection, now. */
+  setOffline: (offline: boolean) => void
   /** Live widget: the worker opens the app (and sees their earnings there). */
   openApp: () => void
   removeEvent: (id: string) => void
@@ -105,6 +107,7 @@ export const useTimelineStore = create<TimelineState>()(
             clockIn: kept(s.config.clockIn),
             clockOut: kept(s.config.clockOut),
             seenAt: kept(s.config.seenAt),
+            offlineAt: kept(s.config.offlineAt),
             ...(untook && { lastChangeAt: Date.now() }),
             ...(crossed && { lastStartCrossAt: Date.now() }),
             ...(crossedEnd && { lastEndCrossAt: Date.now() }),
@@ -158,6 +161,8 @@ export const useTimelineStore = create<TimelineState>()(
         }),
       setPayRate: (payRate) => set((s) => ({ config: { ...s.config, payRate } })),
       setNextShift: (nextShift) => set((s) => ({ config: { ...s.config, nextShift } })),
+      setOffline: (offline) =>
+        set((s) => ({ config: { ...s.config, offlineAt: offline ? (s.config.now ?? s.config.shiftStart) : undefined } })),
       openApp: () => set((s) => (s.config.now === null ? s : { config: { ...s.config, seenAt: s.config.now } })),
       // A new shift length re-plans its breaks and meals (see planEvents).
       setShift: (shiftStart, shiftEnd) =>

@@ -55,9 +55,14 @@ export type TimelineConfig = {
   /**
    * The worker's next shift after this one, for what the widget shows once the
    * clock-out celebration is over: none, one starting 1.5h after this one ends
-   * (a double), or the same hours tomorrow.
+   * (a double), or the same hours tomorrow or in three days.
    */
   nextShift?: NextShift
+  /**
+   * Time of day the phone lost its connection (the live widget's Offline switch).
+   * The widget keeps showing what it last knew, its subtitle saying since when.
+   */
+  offlineAt?: number
   /** When the worker opened the app after clocking out (they've seen their earnings there). */
   seenAt?: number
   /** The worker's hourly pay, for the estimated earnings shown after clocking out. */
@@ -66,12 +71,13 @@ export type TimelineConfig = {
   breakEnds?: Record<string, number>
 }
 
-export type NextShift = "none" | "soon" | "tomorrow"
+export type NextShift = "none" | "soon" | "tomorrow" | "later"
 
 /** Start of the next shift in minutes from this shift's midnight (past 1440 is tomorrow), or undefined. */
 export function nextShiftStart(config: TimelineConfig): number | undefined {
   if (config.nextShift === "soon") return config.shiftEnd + 90
   if (config.nextShift === "tomorrow") return config.shiftStart + 24 * 60
+  if (config.nextShift === "later") return config.shiftStart + 3 * 24 * 60
   return undefined
 }
 
