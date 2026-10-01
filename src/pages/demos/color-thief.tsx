@@ -5,12 +5,12 @@ import { useImagePalette, harmonies, type Color } from "@/components/ui/color-th
 import type { DemoEntry } from "./types"
 
 const ALBUM_SAMPLES = [
-  { label: "Charli XCX — BRAT", src: "/images/album-art/12_charli-xcx_brat.jpg" },
-  { label: "Lana Del Rey — NFR", src: "/images/album-art/06_lana-del-rey_norman-fucking-rockwell.jpg" },
-  { label: "SZA — Ctrl", src: "/images/album-art/08_sza_ctrl.jpg" },
-  { label: "Tyler — Call Me If You Get Lost", src: "/images/album-art/21_tyler-the-creator_call-me-if-you-get-lost.jpg" },
-  { label: "Rosalía — Motomami", src: "/images/album-art/17_rosalia_motomami.jpg" },
-  { label: "Weyes Blood — Titanic Rising", src: "/images/album-art/41_weyes-blood_titanic-rising.jpg" },
+  { label: "Charli XCX — BRAT", src: `${import.meta.env.BASE_URL}images/album-art/12_charli-xcx_brat.jpg` },
+  { label: "Lana Del Rey — NFR", src: `${import.meta.env.BASE_URL}images/album-art/06_lana-del-rey_norman-fucking-rockwell.jpg` },
+  { label: "SZA — Ctrl", src: `${import.meta.env.BASE_URL}images/album-art/08_sza_ctrl.jpg` },
+  { label: "Tyler — Call Me If You Get Lost", src: `${import.meta.env.BASE_URL}images/album-art/21_tyler-the-creator_call-me-if-you-get-lost.jpg` },
+  { label: "Rosalía — Motomami", src: `${import.meta.env.BASE_URL}images/album-art/17_rosalia_motomami.jpg` },
+  { label: "Weyes Blood — Titanic Rising", src: `${import.meta.env.BASE_URL}images/album-art/41_weyes-blood_titanic-rising.jpg` },
 ] as const
 
 function Swatch({ color, active, onClick }: { color: Color; active: boolean; onClick: () => void }) {

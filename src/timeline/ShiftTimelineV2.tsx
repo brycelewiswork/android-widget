@@ -187,7 +187,7 @@ function Marker({ cx, src, w, h, dx, dy, light, fade, delay = 0 }: {
   return (
     <motion.img
       alt=""
-      src={`/widget/${src}.svg`}
+      src={`${import.meta.env.BASE_URL}widget/${src}.svg`}
       width={w}
       height={h}
       className="absolute block max-w-none"

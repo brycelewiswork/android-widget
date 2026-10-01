@@ -54,7 +54,8 @@ const TextBone = ({ lineHeight, height, width }: { lineHeight: number; height: n
 
 // ── Artwork ────────────────────────────────────────────────────────────────
 
-const asset = (name: string) => `/widget/${name}.svg`
+// Under the app's base path, so it also works served from a sub-path (Design Playground).
+const asset = (name: string) => `${import.meta.env.BASE_URL}widget/${name}.svg`
 
 /** An SVG placed at its native size and exact Figma offset. */
 function Glyph({ name, x, y, w, h }: { name: string; x: number; y: number; w: number; h: number }) {

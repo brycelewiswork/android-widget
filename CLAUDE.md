@@ -1,5 +1,8 @@
 # Project context
 
+> **Publishing:** to put this sketch on the shared Design Playground deploy (`homebase-design.vercel.app`, Homebase's
+> enterprise Vercel) instead of Bryce's personal Vercel, follow [PUBLISHING.md](PUBLISHING.md). Read all of it first.
+
 This project was spawned from [project-base](../Project-Base/), a personal
 scaffold for high-fidelity React sketches.
 

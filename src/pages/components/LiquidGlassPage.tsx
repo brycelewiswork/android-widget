@@ -156,10 +156,10 @@ function snapshot(modes: GlassModeDefaults): GlassModeDefaults {
 
 // ── Previews ───────────────────────────────────────────────────────────────
 
-const IMG_BRAT = "/images/album-art/12_charli-xcx_brat.jpg"
-const IMG_MOTOMAMI = "/images/album-art/17_rosalia_motomami.jpg"
-const IMG_NFR = "/images/album-art/06_lana-del-rey_norman-fucking-rockwell.jpg"
-const IMG_CTRL = "/images/album-art/08_sza_ctrl.jpg"
+const IMG_BRAT = `${import.meta.env.BASE_URL}images/album-art/12_charli-xcx_brat.jpg`
+const IMG_MOTOMAMI = `${import.meta.env.BASE_URL}images/album-art/17_rosalia_motomami.jpg`
+const IMG_NFR = `${import.meta.env.BASE_URL}images/album-art/06_lana-del-rey_norman-fucking-rockwell.jpg`
+const IMG_CTRL = `${import.meta.env.BASE_URL}images/album-art/08_sza_ctrl.jpg`
 
 type Backdrop = {
   key: string

@@ -80,7 +80,7 @@ function phaseLabel(phase: Phase) {
  * The art is 22 of the 24px frame, hence the inset.
  */
 export function MealIcon({ size, className = "" }: { size: number; className?: string }) {
-  const mask = 'url("/widget/donut.svg") center / contain no-repeat'
+  const mask = `url("${import.meta.env.BASE_URL}widget/donut.svg") center / contain no-repeat`
   return (
     <span aria-hidden className={`inline-flex shrink-0 items-center justify-center ${className}`} style={{ width: size, height: size }}>
       <span className="block bg-current" style={{ width: (size * 22) / 24, height: (size * 22) / 24, mask, WebkitMask: mask }} />
