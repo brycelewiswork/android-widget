@@ -32,3 +32,4 @@ vite-cache
 *.sln
 *.sw?
 *.tmp.*
+.vercel
