@@ -27,6 +27,13 @@ export type AnimatedNumberProps = {
   blur?: number
   /** Slide distance the old/new glyphs travel, in % of glyph height. */
   travel?: number
+  /**
+   * Prefix of the keyframe set to use: `<prefix>-up-in`, `-up-out`, `-down-in`,
+   * `-down-out`, `-fade-in`. Defaults to the index.css set ("digit").
+   */
+  keyframes?: string
+  /** Easing for the slide keyframes; the curve shape lives in the keyframes themselves when "linear". */
+  ease?: string
 }
 
 export function AnimatedNumber({
@@ -37,13 +44,16 @@ export function AnimatedNumber({
   stagger = 20,
   blur = 8,
   travel = 60,
+  keyframes = "digit",
+  ease = "linear",
 }: AnimatedNumberProps) {
-  const ENTER_UP = `digit-up-in ${duration}ms linear both`
-  const EXIT_UP = `digit-up-out ${duration}ms linear both`
-  const ENTER_DOWN = `digit-down-in ${duration}ms linear both`
-  const EXIT_DOWN = `digit-down-out ${duration}ms linear both`
-  const FADE_IN = `digit-fade-in ${duration}ms cubic-bezier(0, 0, 0.2, 1) both`
-  const FADE_OUT = `digit-up-out ${duration}ms linear both`
+  const k = keyframes
+  const ENTER_UP = `${k}-up-in ${duration}ms ${ease} both`
+  const EXIT_UP = `${k}-up-out ${duration}ms ${ease} both`
+  const ENTER_DOWN = `${k}-down-in ${duration}ms ${ease} both`
+  const EXIT_DOWN = `${k}-down-out ${duration}ms ${ease} both`
+  const FADE_IN = `${k}-fade-in ${duration}ms cubic-bezier(0, 0, 0.2, 1) both`
+  const FADE_OUT = `${k}-up-out ${duration}ms ${ease} both`
 
   const formatted = format(value)
   const prevFormattedRef = useRef<string>(formatted)
@@ -51,6 +61,8 @@ export function AnimatedNumber({
   const changeCounterRef = useRef<number>(0)
   const animKeyCounterRef = useRef<number>(0)
   const leftmostChangedRef = useRef<number>(Infinity)
+  /** Positions whose character actually changed; unchanged ones (a trailing "m") hold still. */
+  const changedRef = useRef<Set<number>>(new Set())
 
   const [direction, setDirection] = useState<"up" | "down" | "same">("same")
   const [exitSlots, setExitSlots] = useState<Map<number, ExitSlot>>(new Map())
@@ -74,6 +86,9 @@ export function AnimatedNumber({
       }
     }
     leftmostChangedRef.current = leftmostChanged
+    changedRef.current = new Set(
+      Array.from({ length: maxLen }, (_, i) => i).filter((i) => i >= leftmostChanged && prevFormatted[i] !== newFormatted[i]),
+    )
 
     setExitSlots((prev) => {
       const next = new Map(prev)
@@ -101,7 +116,7 @@ export function AnimatedNumber({
   return (
     <span className={`tabular-nums${className ? ` ${className}` : ""}`} style={rootStyle}>
       {Array.from(formatted).map((char, index) => {
-        const shouldAnimate = index >= leftmostChangedRef.current
+        const shouldAnimate = changedRef.current.has(index)
         const exitSlot = exitSlots.get(index)
         const enterAnim = shouldAnimate
           ? isDigit(char)

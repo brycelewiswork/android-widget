@@ -1,0 +1,89 @@
+@import "@fontsource-variable/plus-jakarta-sans";
+
+/* Widget-local palette, straight from the Figma frames. These describe the
+   widget surface, not the sketch's app chrome, so they live here rather than
+   in the global @theme. */
+.widget {
+  --w-surface: #cecece;
+  --w-ink: #000000;
+  --w-ink-muted: #787878;
+  --w-ink-secondary: #686868; /* subtitle line — Figma 4×1 "Back by" */
+  --w-ink-meta: #858585;
+  --w-ink-time: #7b7b7b;
+  --w-content-primary: #2c2935;
+  --w-on-dark: #ededed;
+  --w-fill: rgb(0 0 0 / 0.15);
+  --w-bar-active: #050816;
+
+  font-family: "Plus Jakarta Sans Variable", sans-serif;
+  line-height: normal;
+  background: var(--w-surface);
+  color: var(--w-ink);
+}
+
+/* Show bounds: drop the surface, outline every box, fade the artwork. */
+.widget[data-bounds] {
+  --wf-line: oklch(0.62 0.19 255);
+  background: transparent;
+  outline: 1px dashed var(--wf-line);
+  outline-offset: -1px;
+}
+.widget[data-bounds] * {
+  outline: 1px solid color-mix(in oklch, var(--wf-line) 45%, transparent);
+  outline-offset: -0.5px;
+}
+.widget[data-bounds] [data-fill] {
+  background: transparent;
+}
+.widget[data-bounds] img {
+  /* Flatten to one ink so light-on-dark glyphs don't vanish. */
+  filter: brightness(0);
+  opacity: 0.3;
+}
+.widget[data-bounds] p,
+.widget[data-bounds] span {
+  color: color-mix(in oklch, var(--wf-line) 70%, #777);
+}
+
+/* The page canvas widgets sit on: a 16px grid over a tinted surface. */
+.widget-canvas {
+  --grid-line: color-mix(in oklch, var(--label) 5%, transparent);
+  background-color: var(--surface);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 16px 16px;
+  background-position: -1px -1px;
+}
+
+/*
+ * The widgets' rolling numbers, on the same terms as their text swaps (see
+ * useTextSwap in Widget.tsx): a light blur, only ever seen on faint glyphs. A
+ * leaving digit is faded out by 30% while its blur only starts building; an
+ * arriving one brightens by 55% and sharpens through to the end. A short slide
+ * with no overshoot. Used through <AnimatedNumber keyframes="widget-digit">.
+ */
+@keyframes widget-digit-up-out {
+  0%   { opacity: 1; transform: translateY(0); filter: blur(0px); animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+  30%  { opacity: 0; filter: blur(0.5px); animation-timing-function: ease-in; }
+  100% { opacity: 0; transform: translateY(calc(-1 * var(--digit-travel))); filter: blur(var(--digit-blur)); }
+}
+@keyframes widget-digit-down-out {
+  0%   { opacity: 1; transform: translateY(0); filter: blur(0px); animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+  30%  { opacity: 0; filter: blur(0.5px); animation-timing-function: ease-in; }
+  100% { opacity: 0; transform: translateY(var(--digit-travel)); filter: blur(var(--digit-blur)); }
+}
+@keyframes widget-digit-up-in {
+  0%   { opacity: 0; transform: translateY(var(--digit-travel)); filter: blur(var(--digit-blur)); }
+  55%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0px); }
+}
+@keyframes widget-digit-down-in {
+  0%   { opacity: 0; transform: translateY(calc(-1 * var(--digit-travel))); filter: blur(var(--digit-blur)); }
+  55%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0px); }
+}
+@keyframes widget-digit-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

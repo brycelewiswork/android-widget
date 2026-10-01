@@ -7,6 +7,10 @@ import { cn } from "@/lib/utils"
 // signature (matching the documented API) and normalize internally.
 type SliderProps = Omit<SliderPrimitive.Root.Props, "onValueChange"> & {
   onValueChange?: (value: number[]) => void
+  /** Per-thumb accessible name (e.g. "Shift start" / "Shift end" on a range). */
+  getAriaLabel?: (index: number) => string
+  /** Per-thumb spoken value (e.g. a clock time instead of raw minutes). */
+  getAriaValueText?: (formattedValue: string, value: number, index: number) => string
 }
 
 function Slider({
@@ -16,6 +20,8 @@ function Slider({
   min = 0,
   max = 100,
   onValueChange,
+  getAriaLabel,
+  getAriaValueText,
   ...props
 }: SliderProps) {
   const _values = Array.isArray(value)
@@ -54,6 +60,8 @@ function Slider({
           <SliderPrimitive.Thumb
             data-slot="slider-thumb"
             key={index}
+            getAriaLabel={getAriaLabel}
+            getAriaValueText={getAriaValueText}
             className="relative block size-4 shrink-0 rounded-full bg-blue-500 shadow-xs ring-blue-500/30 transition-[color,box-shadow] select-none after:absolute after:-inset-2 hover:ring-3 focus-visible:ring-3 focus-visible:outline-hidden active:ring-3 disabled:pointer-events-none disabled:opacity-50"
           />
         ))}

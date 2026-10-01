@@ -1,0 +1,36 @@
+/* Ported from ../android-nav (src/sketch/sketch.css): the phone-screen theme
+   and Android type the DeviceFrame + StatusBar read. */
+@import "@fontsource-variable/roboto";
+
+.font-roboto {
+  font-family: "Roboto Variable", Roboto, sans-serif;
+}
+
+/* Phone theme — scoped to the device screen, independent of the site's own
+   light/dark mode. Light values are Figma's (content/primary, surface/page). */
+.phone {
+  --p-page: #f3f2f6;    /* surface/page */
+  --p-content: #2c2935; /* content/primary */
+  color-scheme: light;
+  background: var(--p-page);
+}
+
+.phone.phone-dark {
+  --p-page: #121115;
+  --p-content: #f3f2f6;
+  color-scheme: dark;
+}
+
+/*
+ * Home-screen wallpaper: AOSP's stock default_wallpaper.png (Apache-2.0), from
+ * platform/frameworks/base core/res/res/drawable-nodpi. 922×1024, so it's
+ * cover-cropped onto the 410×914 screen.
+ */
+.wallpaper {
+  background: #0d0c14 url("../assets/device/default-wallpaper.png") center / cover no-repeat;
+}
+
+/* Wireframe pass sits on a plain white screen; the wallpaper is for hi-fi. */
+.phone .wallpaper[data-fidelity="wireframe"] {
+  background: #ffffff;
+}

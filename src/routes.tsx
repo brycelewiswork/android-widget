@@ -18,9 +18,11 @@ import {
   IconGridDots,
   IconRulerMeasure,
   IconStack2,
+  IconClockHour4,
 } from "@tabler/icons-react"
 import { lazy } from "react"
-import { Home } from "@/pages/Home"
+import { AllWidgetsPage, Widget2x2Page, Widget4x1Page, Widget4x2Page, Widget4x3Page } from "@/widgets/WidgetPages"
+import { TimelinePage, TimelineV2Page } from "@/timeline/TimelinePage"
 
 // Home stays eager so the landing route paints instantly. Every other page is
 // code-split into its own chunk and only fetched when its route is visited —
@@ -71,7 +73,13 @@ export type RouteEntry = {
 }
 
 export const ROUTES: RouteEntry[] = [
-  { path: "/",            label: "Home",    icon: IconHome,            Component: Home },
+  { path: "/",            label: "Widgets", icon: IconHome,            Component: AllWidgetsPage },
+  { path: "/2x2",         label: "2 × 2",   icon: IconLayoutCards,     Component: Widget2x2Page },
+  { path: "/4x1",         label: "4 × 1",   icon: IconLayoutCards,     Component: Widget4x1Page },
+  { path: "/4x2",         label: "4 × 2",   icon: IconLayoutCards,     Component: Widget4x2Page },
+  { path: "/4x3",         label: "4 × 3",   icon: IconLayoutCards,     Component: Widget4x3Page },
+  { path: "/timeline",    label: "Timeline", icon: IconClockHour4,     Component: TimelinePage },
+  { path: "/timeline-2",  label: "Timeline 2", icon: IconClockHour4,   Component: TimelineV2Page },
   { path: "/demos",       label: "Demos",   icon: IconSparkles,        system: true, Component: Demos },
   { path: "/colors",      label: "Color",   icon: IconPalette,         system: true, Component: Colors },
   { path: "/foundations", label: "Fluid",   icon: IconStack2,          system: true, Component: Foundations },
