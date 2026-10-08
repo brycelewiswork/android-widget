@@ -1,5 +1,5 @@
 import { createContext, useContext, type CSSProperties, type ReactNode } from "react"
-import { IconCalendar, IconLoader2, IconLogin2 } from "@tabler/icons-react"
+import { IconCalendar, IconCurrencyDollar, IconLoader2, IconLogin2 } from "@tabler/icons-react"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { AnimatedNumber } from "@/components/ui/animated-number"
 import { DURATION, EASE, SPRING_FAST } from "@/lib/motion"
@@ -9,7 +9,7 @@ import { ShiftTimelineStatic } from "@/timeline/ShiftTimelineStatic"
 import { ShiftTimelineV2 } from "@/timeline/ShiftTimelineV2"
 import { presetConfig, type TimelineConfig } from "@/timeline/model"
 import { HIFI, type WidgetLayout } from "./hifi"
-import { WIDGET_SIZES, type WidgetSize } from "./sizes"
+import { sizeAt, type WidgetSize } from "./sizes"
 import { contentFor, type Action, type IconName, type StateContent, type WidgetStateId } from "./states"
 import "./widget.css"
 
@@ -96,6 +96,7 @@ const ICONS: Record<IconName, IconSpec> = {
   xmark: { box: 24, w: 18.161, h: 18.1069, src: { dark: "xmark" } },
   login: { box: 24, w: 24, h: 24, tabler: IconLogin2 },
   calendar: { box: 24, w: 24, h: 24, tabler: IconCalendar },
+  money: { box: 24, w: 24, h: 24, tabler: IconCurrencyDollar },
 }
 
 function Icon({ name, tone }: { name: IconName; tone: Tone }) {
@@ -271,9 +272,10 @@ export type WidgetAction = "clockIn" | "clockOut" | "takeBreak" | "takeMeal" | "
 const OnAction = createContext<((action: WidgetAction) => void) | undefined>(undefined)
 const CurrentState = createContext<WidgetStateId>("upcoming")
 
-const ACTION_BY_LABEL: Record<string, WidgetAction> = {
+export const ACTION_BY_LABEL: Record<string, WidgetAction> = {
   "Clock In": "clockIn",
   "Clock Out": "clockOut",
+  "Clock out": "clockOut",
   "Take break": "takeBreak",
   Break: "takeBreak",
   "Take meal": "takeMeal",
@@ -294,7 +296,7 @@ const PRESSABLE =
   "cursor-pointer transition-transform duration-150 ease-out active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--w-ink)]"
 
 /** The 4×1's icon squares carry no label: what each one does, by its icon and the state. */
-function compactAction(icon: IconName, state: WidgetStateId): WidgetAction | undefined {
+export function compactAction(icon: IconName, state: WidgetStateId): WidgetAction | undefined {
   if (icon === "coffee") return "takeBreak"
   if (icon === "meal") return "takeMeal"
   if (icon === "xmark") return "endBreak"
@@ -303,7 +305,7 @@ function compactAction(icon: IconName, state: WidgetStateId): WidgetAction | und
 }
 
 /** Props that make a button element act on tap / Enter / Space — or nothing, when it has no action here. */
-function useActs(action: WidgetAction | undefined, label: string) {
+export function useActs(action: WidgetAction | undefined, label: string) {
   const onAction = useContext(OnAction)
   const loading = useLoading()
   if (!onAction || !action || loading) return {}
@@ -674,6 +676,14 @@ const WIREFRAME: Record<WidgetSize, WidgetLayout> = {
   "4x3": Wireframe4x3,
 }
 
+// ── For the hi-fi layouts (./hifi) ─────────────────────────────────────────
+
+/** The widget's loading flag, timeline, state and pending button — what the hi-fi layouts read alongside `content`. */
+export const useWidgetLoading = useLoading
+export const useWidgetTimeline = () => useContext(Timeline)
+export const useWidgetState = () => useContext(CurrentState)
+export const useWidgetBusy = () => useContext(Busy)
+
 // ── Public component ───────────────────────────────────────────────────────
 
 export function Widget({
@@ -708,13 +718,14 @@ export function Widget({
   showBounds?: boolean
   className?: string
 }) {
-  const { width, height } = WIDGET_SIZES[size]
-  const Layout = (fidelity === "hifi" && HIFI[size]) || WIREFRAME[size]
+  const hifi = fidelity === "hifi" && !!HIFI[size]
+  const { width, height } = sizeAt(size, hifi ? "hifi" : "wireframe")
+  const Layout = (hifi && HIFI[size]) || WIREFRAME[size]
   const base = contentFor(state, size, minutes)
   const content = { ...base, ...copy, ...(sub && { sub }) }
   return (
     <div
-      className={cn("widget relative shrink-0 overflow-clip rounded-[28px]", className)}
+      className={cn("widget relative shrink-0 overflow-clip", hifi ? "widget-hifi rounded-[24px]" : "rounded-[28px]", className)}
       style={{ width, height }}
       data-size={size}
       data-state={state}

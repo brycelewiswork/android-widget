@@ -14,7 +14,8 @@ import { demoTimeline, FLOWS, type FlowStep } from "./flows"
 import { WIDGET_STATES } from "./states"
 import { useRotatingSubtitle, useSubtitleDriver } from "./subtitles"
 import { Widget, type WidgetAction } from "./Widget"
-import { WIDGET_SIZES, WIDGET_SIZE_ORDER, sizeLabel, type WidgetSize } from "./sizes"
+import { WIDGET_SIZE_ORDER, sizeAt, sizeLabel, type WidgetSize } from "./sizes"
+import { hasLayout } from "./hifi"
 
 // Home-screen placement inside the 410dp-wide screen. Widgets hug the launcher
 // grid's side margin — (410 − 395) / 2 — and stack below the 52dp status bar.
@@ -38,7 +39,7 @@ function PhoneHomeScreen({ sizes }: { sizes: WidgetSize[] }) {
             <span key={size}>
               {i > 0 && " · "}
               <Link to={`/${size}`} className="font-medium text-label hover:underline">{sizeLabel(size)}</Link>{" "}
-              <span className="font-mono">{WIDGET_SIZES[size].width} × {WIDGET_SIZES[size].height}</span>
+              <span className="font-mono">{sizeAt(size, hasLayout(fidelity, size) ? fidelity : "wireframe").width} × {sizeAt(size, hasLayout(fidelity, size) ? fidelity : "wireframe").height}</span>
             </span>
           ))}
         </p>
@@ -114,7 +115,8 @@ function LiveSpecimen({ size }: { size: WidgetSize }) {
 function SizeCheck({ size, children }: { size: WidgetSize; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
   const [measured, setMeasured] = useState<{ w: number; h: number } | null>(null)
-  const spec = WIDGET_SIZES[size]
+  const fidelity = useWidgetStore((s) => s.fidelity)
+  const spec = sizeAt(size, hasLayout(fidelity, size) ? fidelity : "wireframe")
   useLayoutEffect(() => {
     const el = ref.current?.firstElementChild
     if (!(el instanceof HTMLElement)) return

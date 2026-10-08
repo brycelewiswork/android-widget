@@ -1,6 +1,6 @@
 import type { Precision } from "@/store/useWidgetStore"
 import { activeBreak, clockTime, nextShiftStart, remainingEvents, type TimelineConfig, type TimelineEvent } from "@/timeline/model"
-import { formatElapsed, formatUntil, type StateContent, type WidgetStateId } from "./states"
+import { CLOCK_OUT_TITLES, formatElapsed, formatUntil, type IconName, type StateContent, type WidgetStateId } from "./states"
 
 /*
  * The live widget on each size page: the widget state, live minutes and real
@@ -125,20 +125,25 @@ function compactActions(config: TimelineConfig): Partial<StateContent> {
  * past it "Time to clock out" / "Shift ended 10m ago" (nothing can clock them
  * out but them). Undefined earlier in the shift.
  */
-function shiftEndWidget(config: TimelineConfig, now: number, calm: boolean): LiveWidget | undefined {
+function shiftEndWidget(config: TimelineConfig, now: number, calm: boolean, working = false): LiveWidget | undefined {
   const left = config.shiftEnd - now
+  // Figma: near the end, an unused break comes along as the secondary action; with both kinds
+  // unused, they're icon squares (like Message) before Clock out.
+  const unused = working ? leftToTake(config) : []
+  const extras: Partial<StateContent> =
+    unused.length === 1 ? { alt: TAKE[unused[0]] } : unused.length > 1 ? { squares: unused.map((k) => TAKE[k].icon) } : {}
   if (left <= 0) {
     const over = calm ? calmEnding(Math.floor(-left)) : Math.floor(-left)
     if (over < 1) {
       return {
         state: "overtime",
-        copy: { lead: "Time to clock out", value: "", trail: undefined, ticker: undefined, sub: `Shift ended at ${clockTime(config.shiftEnd)}` },
+        copy: { lead: "Time to clock out", value: "", trail: undefined, ticker: undefined, sub: `Shift ended at ${clockTime(config.shiftEnd)}`, ...extras },
         timeline: config,
       }
     }
-    return { state: "overtime", minutes: over, timeline: config }
+    return { state: "overtime", minutes: over, copy: extras, timeline: config }
   }
-  if (left <= 60) return { state: "ending", minutes: calm ? calmEnding(Math.floor(left)) : Math.ceil(left), timeline: config }
+  if (left <= 60) return { state: "ending", minutes: calm ? calmEnding(Math.floor(left)) : Math.ceil(left), copy: extras, timeline: config }
   return undefined
 }
 
@@ -147,12 +152,19 @@ function shiftEndWidget(config: TimelineConfig, now: number, calm: boolean): Liv
  * it on the 4×2 / 4×3 (`alt`); one → just that as the primary; none → Clock Out.
  * The primary is the break unless `meal` puts the meal first (a meal nudge).
  */
+const TAKE = { break: { icon: "coffee", label: "Take break" }, meal: { icon: "meal", label: "Take meal" } } as const satisfies Record<string, { icon: IconName; label: string }>
+
+/** The kinds of break still to take today: meal first, then break. */
+function leftToTake(config: TimelineConfig): ("meal" | "break")[] {
+  const left = new Set(remainingEvents(config).map((e) => e.kind))
+  return (["meal", "break"] as const).filter((k) => left.has(k))
+}
+
 function onClockActions(config: TimelineConfig, meal = false): Partial<StateContent> {
   const left = new Set(remainingEvents(config).map((e) => e.kind))
-  const take = { break: { icon: "coffee", label: "Take break" }, meal: { icon: "meal", label: "Take meal" } } as const
   const kinds = (meal ? (["meal", "break"] as const) : (["break", "meal"] as const)).filter((k) => left.has(k))
-  if (kinds.length === 0) return { primary: { icon: "timeclock", label: "Clock Out" }, alt: undefined }
-  return { primary: take[kinds[0]], alt: kinds[1] ? take[kinds[1]] : undefined }
+  if (kinds.length === 0) return { primary: { icon: "timeclock", label: "Clock out" }, alt: undefined }
+  return { primary: TAKE[kinds[0]], alt: kinds[1] ? TAKE[kinds[1]] : undefined }
 }
 
 const DAY_MINUTES = 24 * 60
@@ -176,8 +188,8 @@ function nextShiftWidget(config: TimelineConfig, next: number, now: number, calm
   return { state: "off", copy: { lead: `Off until ${until}`, sub: `Next shift at ${shortTime(next)}` }, timeline }
 }
 
-/** 540 → "9 am", 570 → "9:30 am" — the headline's start time. */
-const shortTime = (minutes: number) => clockTime(minutes).replace(":00", "")
+/** 540 → "9am", 570 → "9:30am" — the headline's start time (Figma: "at 9am"). */
+const shortTime = (minutes: number) => clockTime(minutes).replace(":00", "").replace(" ", "")
 
 export type LiveWidget = {
   state: WidgetStateId
@@ -189,13 +201,13 @@ export type LiveWidget = {
 
 /**
  * What the live widget shows. Offline (`config.offlineAt`), it still runs on
- * what it last knew, but the subtitle says so: "Offline · updated 9:41 am".
+ * what it last knew, but the subtitle says so: "Offline • updated 9:41 am".
  */
 export function liveWidget(config: TimelineConfig, precision: Precision = "exact"): LiveWidget {
   const live = liveWidgetOnline(config, precision)
   const { offlineAt, now } = config
   if (offlineAt === undefined || now === null || now < offlineAt || config.empty) return live
-  return { ...live, copy: { ...live.copy, sub: `Offline · updated ${clockTime(offlineAt)}` } }
+  return { ...live, copy: { ...live.copy, sub: `Offline • updated ${clockTime(offlineAt)}` } }
 }
 
 function liveWidgetOnline(config: TimelineConfig, precision: Precision): LiveWidget {
@@ -217,7 +229,8 @@ function liveWidgetOnline(config: TimelineConfig, precision: Precision): LiveWid
       if (now < until && !seen) {
         return {
           state: "shift-done",
-          copy: { sub: `Est. earnings ${money(estimatedEarnings(config))}` },
+          // One of Figma's four titles, the same for the whole celebration (picked by the clock-out minute).
+          copy: { lead: CLOCK_OUT_TITLES[Math.floor(out) % CLOCK_OUT_TITLES.length], sub: `Est. earnings ${money(estimatedEarnings(config))}` },
           // The day done: the track fills out and closes up (see the timeline's finish).
           timeline: { ...config, now: out, complete: true },
         }
@@ -253,7 +266,7 @@ function liveWidgetOnline(config: TimelineConfig, precision: Precision): LiveWid
     case "break": {
       const meal = status.meal
       const primary = meal ? { primary: { icon: "timeclock", label: "End meal" } as const } : {}
-      const back = `Back by ${clockTime(status.due)}`
+      const back = `back by ${clockTime(status.due)}`
       // The shift's end outranks a break that's run over: past the end it's time to clock
       // out, and in the last hour an overdue break reads as the shift ending. (Clocking out
       // ends the break too.)
@@ -308,12 +321,13 @@ function liveWidgetOnline(config: TimelineConfig, precision: Precision): LiveWid
             ...compactActions(config),
             sub: suggest.last ? `Last chance, ${until} left` : `${until} until you're off`,
             ...onClockActions(config, meal),
-            ...(meal && { lead: "Time for your meal?" }),
+            // Figma: "Time for your [break]?" first, then "Take a break?" as the last chance.
+            lead: suggest.last ? (meal ? "Take a meal?" : "Take a break?") : meal ? "Time for your meal?" : "Time for your break?",
           },
           timeline: config,
         }
       }
-      const end = shiftEndWidget(config, now, calm)
+      const end = shiftEndWidget(config, now, calm, true)
       if (end) return end
       const worked = Math.floor(now - config.clockIn!)
       if (worked < (calm ? 15 : 1)) return { state: "clocked-in", copy: { ...welcome(config.clockIn!), ...compactActions(config), ...onClockActions(config) }, timeline: config }

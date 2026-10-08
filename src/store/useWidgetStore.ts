@@ -17,7 +17,8 @@ type WidgetViewState = {
   setPrecision: (precision: Precision) => void
 }
 
-const DEFAULTS = { fidelity: "wireframe", showBounds: false, precision: "calm" } as const
+// Hi-fi by default: Figma is the source of truth now.
+const DEFAULTS = { fidelity: "hifi", showBounds: false, precision: "calm" } as const
 
 export const useWidgetStore = create<WidgetViewState>()(
   persist(

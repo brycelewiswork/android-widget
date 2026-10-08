@@ -122,7 +122,7 @@ export const GAPS: Gap[] = [
     id: "offline-empty",
     title: "Offline with nothing cached",
     detail:
-      "Offline is a subtitle on whatever the widget last knew (“Offline · updated 9:41 am”). With nothing cached at all — a fresh install, no connection — there's nothing to show it on, and it needs a true “Can't connect” state.",
+      "Offline is a subtitle on whatever the widget last knew (“Offline • updated 9:41 am”). With nothing cached at all — a fresh install, no connection — there's nothing to show it on, and it needs a true “Can't connect” state.",
     status: "open",
     needs: "Design",
     source: "Design work",
@@ -347,7 +347,7 @@ export const GAPS: Gap[] = [
     title: "Offline is a subtitle, not a state",
     detail: "No connection could replace whatever the widget shows.",
     status: "decided",
-    decision: "The widget keeps showing what it last knew, and the subtitle says so: “Offline · updated 9:41 am”. Any state can be offline.",
+    decision: "The widget keeps showing what it last knew, and the subtitle says so: “Offline • updated 9:41 am”. Any state can be offline.",
     source: "Design work",
   },
   {

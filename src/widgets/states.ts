@@ -23,7 +23,7 @@ export const WIDGET_STATES = [
 
 export type WidgetStateId = (typeof WIDGET_STATES)[number]["id"]
 
-export type IconName = "timeclock" | "coffee" | "meal" | "message" | "xmark" | "login" | "calendar"
+export type IconName = "timeclock" | "coffee" | "meal" | "message" | "xmark" | "login" | "calendar" | "money"
 
 export type Action = { icon: IconName; label: string }
 
@@ -80,6 +80,11 @@ export type StateContent = {
   ticker?: { slot: "value" | "trail"; minutes: number; format: (minutes: number) => string }
   /** The button (by its icon) waiting on the server after a tap: it shows a spinner in place of its icon. */
   busy?: IconName
+  /**
+   * Extra icon squares before the primary on the 4×2 / 4×3 (hi-fi): near the
+   * shift's end, the breaks still unused when there's more than one kind.
+   */
+  squares?: readonly IconName[]
 }
 
 // ── Time ───────────────────────────────────────────────────────────────────
@@ -134,7 +139,7 @@ const PLACE = "Starbucks Woodlawn Creek"
 const SCHEDULE: readonly ScheduleRow[] = [
   { day: "Mon", place: "Downtown", from: "10am", to: "6pm", bar: [18.445, 57.487] },
   { day: "Tue", place: "Downtown", from: "10am", to: "4pm", bar: [18.445, 49.781] },
-  { day: "Thu", place: "Airport", from: "12am", to: "8pm", bar: [40.206, 47.175] },
+  { day: "Thu", place: "Airport", from: "12pm", to: "8pm", bar: [40.206, 47.175] },
 ]
 const MESSAGE: Action = { icon: "message", label: "Message" }
 /**
@@ -146,13 +151,15 @@ const MESSAGE: Action = { icon: "message", label: "Message" }
 const WIDE_MESSAGE = { "4x2": { secondary: MESSAGE }, "4x3": { secondary: MESSAGE } } as const
 /** On the clock, the 4×2 / 4×3 offer both: Take meal beside the primary Take break. */
 const TAKE_MEAL: Action = { icon: "meal", label: "Take meal" }
+const CLOCK_OUT: Action = { icon: "timeclock", label: "Clock out" }
+const SCHEDULE_BUTTON: Action = { icon: "calendar", label: "Schedule" }
 const WIDE_ON_CLOCK = { "4x2": { alt: TAKE_MEAL }, "4x3": { alt: TAKE_MEAL } } as const
 
 const UPCOMING: StateDef = {
   // "Next shift in 2h at 9 am": the countdown rolls, the start time stays.
   lead: "Next shift in",
   value: "2h",
-  trail: "at 9 am",
+  trail: "at 9am",
   sub: PLACE,
   timeline: true,
   // Before the shift there's one thing to do. On the 2×2, clocking in slides it
@@ -166,29 +173,25 @@ const UPCOMING: StateDef = {
 
 const STATES: Record<WidgetStateId, StateDef> = {
   "signed-out": {
-    lead: "Sign in to see",
-    value: "your shifts",
-    sub: "👋 We saved you a spot",
+    lead: "Sign in to see shifts",
+    value: "",
+    sub: "We saved you a spot 👋",
     primary: { icon: "login", label: "Sign in" },
     compact: "login",
-    sizes: { "2x2": { lead: "Sign in", value: "to see shifts" }, "4x1": { compactStyle: "primary-icon" } },
+    sizes: { "4x1": { compactStyle: "primary" } },
   },
   loading: { ...UPCOMING, loading: true },
   // A true empty state: there is no next shift to name. "Nothing today, next
   // one Monday" is an upcoming shift, not this.
   "no-shifts": {
-    lead: "No upcoming",
-    value: "shifts",
+    lead: "No upcoming shifts",
+    value: "",
     sub: "We'll let you know",
     timeline: "empty",
-    primary: { icon: "calendar", label: "View Schedule" },
+    primary: SCHEDULE_BUTTON,
     compact: "calendar",
     schedule: "empty",
-    sizes: {
-      "2x2": { primary: { icon: "calendar", label: "Schedule" } },
-      // "View Schedule" plus the icon squeezes the headline onto two lines.
-      "4x1": { compactStyle: "primary", primary: { icon: "calendar", label: "Schedule" } },
-    },
+    sizes: { ...WIDE_MESSAGE, "4x1": { compactStyle: "primary" } },
   },
   upcoming: UPCOMING,
   "clocked-in": {
@@ -203,10 +206,9 @@ const STATES: Record<WidgetStateId, StateDef> = {
     schedule: SCHEDULE,
     sizes: {
       // Take meal takes Message's slot beside Take break (Wireframe2x2 shows `alt` there).
-      "2x2": { lead: "On the clock", value: "6h 12m", alt: TAKE_MEAL },
-      // No "for": beside the buttons, "On the clock for 15h 59m" wraps. Break and
-      // meal as two icon buttons (the live widget drops one once it's used up).
-      "4x1": { lead: "On the clock", compactStyle: "pair", compactIcons: ["meal", "coffee"] },
+      "2x2": { alt: TAKE_MEAL },
+      // Break and meal as two icon buttons (the live widget drops one once it's used up).
+      "4x1": { compactStyle: "pair", compactIcons: ["meal", "coffee"] },
       ...WIDE_ON_CLOCK,
     },
     time: timed("value", formatElapsed),
@@ -214,8 +216,9 @@ const STATES: Record<WidgetStateId, StateDef> = {
   // On the clock late in the shift with a break or meal still unused (see
   // suggestedBreak in live.ts): ask instead of counting, with the time left as
   // the reason. The live widget swaps in "Time for your meal?" / Take meal.
+  // Figma: "Time for your [break]?" first, then "Take a break?" as the last chance.
   "break-nudge": {
-    lead: "Take a break?",
+    lead: "Time for your break?",
     value: "",
     sub: "2h until you're off",
     timeline: true,
@@ -223,12 +226,12 @@ const STATES: Record<WidgetStateId, StateDef> = {
     secondary: MESSAGE,
     compact: "coffee",
     schedule: SCHEDULE,
-    sizes: { ...WIDE_ON_CLOCK, "2x2": { alt: TAKE_MEAL }, "4x1": { compactStyle: "pair", compactIcons: ["meal", "coffee"] } },
+    sizes: { "2x2": { secondary: undefined }, "4x1": { compactStyle: "primary" } },
   },
   break: {
     lead: "Break ends in",
     value: "12m",
-    sub: "Back by 11:46 am",
+    sub: "back by 11:46 am",
     timeline: true,
     // On a break there's one thing to do: on the 2×2, clock-in's move in reverse —
     // Message leaves and the primary fills the row as End break.
@@ -243,8 +246,8 @@ const STATES: Record<WidgetStateId, StateDef> = {
     value: "15m",
     sub: "Finish line in sight",
     timeline: true,
-    // One thing left to do: on the 2×2, Message leaves and Clock Out fills the row.
-    primary: { icon: "timeclock", label: "Clock Out" },
+    // One thing left to do: on the 2×2, Message leaves and Clock out fills the row.
+    primary: CLOCK_OUT,
     compact: "timeclock",
     schedule: SCHEDULE,
     sizes: { ...WIDE_MESSAGE, "4x1": { compactStyle: "primary" } },
@@ -262,7 +265,7 @@ const STATES: Record<WidgetStateId, StateDef> = {
     trail: "ago",
     sub: "You're still clocked in",
     timeline: true,
-    primary: { icon: "timeclock", label: "Clock Out" },
+    primary: CLOCK_OUT,
     compact: "timeclock",
     schedule: SCHEDULE,
     sizes: { ...WIDE_MESSAGE, "4x1": { compactStyle: "primary" } },
@@ -274,30 +277,34 @@ const STATES: Record<WidgetStateId, StateDef> = {
   off: {
     lead: "Off until tomorrow",
     value: "",
-    sub: "Next shift at 9 am",
+    sub: "Next shift at 9am",
     timeline: true,
-    primary: { icon: "calendar", label: "View Schedule" },
+    primary: SCHEDULE_BUTTON,
     compact: "calendar",
     schedule: SCHEDULE,
-    sizes: {
-      "2x2": { primary: { icon: "calendar", label: "Schedule" } },
-      "4x1": { compactStyle: "primary", primary: { icon: "calendar", label: "Schedule" } },
-    },
+    sizes: { ...WIDE_MESSAGE, "4x1": { compactStyle: "primary" } },
   },
   "shift-done": {
-    lead: "Nice work today! 🎉",
+    // One of four titles, picked per shift (see CLOCK_OUT_TITLES). The actions lead to
+    // the Money tab: the shift's summary (Keyvan: not every location publishes a schedule).
+    lead: "Nice work today 🎉",
     value: "",
     sub: "Est. earnings $142.50",
     timeline: true,
-    primary: { icon: "calendar", label: "View Schedule" },
+    primary: { icon: "calendar", label: "Shift summary" },
+    alt: { icon: "money", label: "Cash out" },
     compact: "calendar",
     schedule: SCHEDULE,
     sizes: {
-      "2x2": { primary: { icon: "calendar", label: "Schedule" } },
-      "4x1": { compactStyle: "primary", primary: { icon: "calendar", label: "Schedule" } },
+      "2x2": { primary: { icon: "calendar", label: "Summary" }, alt: undefined },
+      "4x1": { compactStyle: "pair", compactIcons: ["money", "calendar"] },
+      "4x3": { primary: { icon: "calendar", label: "View shift summary" }, alt: undefined, secondary: { icon: "money", label: "Cash out" } },
     },
   },
 }
+
+/** Figma's clock-out titles, one per shift. */
+export const CLOCK_OUT_TITLES = ["Nice work today 🎉", "That's a wrap 🎉", "Another shift in the books 🙌", "Solid shift today 💪"] as const
 
 /**
  * The content a given size shows in a given state: per-size overrides, then

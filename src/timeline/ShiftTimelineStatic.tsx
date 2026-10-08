@@ -1,21 +1,6 @@
-import { useId } from "react"
-import { clockTime, phaseOf, takenEvents, TRACK, type TimelineConfig } from "./model"
-import {
-  CAP_R,
-  CUT,
-  CY,
-  DOT_R,
-  END_CUT,
-  END_X,
-  INK,
-  JOIN_COVERED,
-  joinPath,
-  layout,
-  PROGRESS_FILL,
-  START_X,
-  TRACK_FILL,
-} from "./track"
-import { TrackShape } from "./TrackShape"
+import { useId, type ReactNode } from "react"
+import { clockTime, phaseOf, takenEvents, type TimelineConfig } from "./model"
+import { INK, PROGRESS_FILL, TRACK_FILL, WIRE, type Track } from "./track"
 
 /*
  * The shift timeline the widgets draw — what Android can actually build.
@@ -69,8 +54,49 @@ function Marker({ cx, src, w, h, dx, dy, light }: { cx: number; src: string; w: 
   )
 }
 
-export function ShiftTimelineStatic({ config: live, labelSize }: { config: TimelineConfig; labelSize: 13.5 | 16 }) {
+/** What a marker stands for: the clock at either end, or a break / meal bulge. */
+export type MarkerKind = "clock" | "break" | "meal"
+
+/** How a track is coloured, and how its markers are drawn (`filled`: on the progress colour). */
+export type TimelineSkin = {
+  track: string
+  progress: string
+  dot: string
+  marker: (kind: MarkerKind, cx: number, filled: boolean) => ReactNode
+}
+
+/** The wireframe: grey track, black progress, the Figma glyphs inverted on black. */
+export const WIRE_SKIN: TimelineSkin = {
+  track: TRACK_FILL,
+  progress: PROGRESS_FILL,
+  dot: INK,
+  marker: (kind, cx, filled) =>
+    kind === "clock" ? (
+      <Marker key={`clock-${cx}`} cx={cx} src="timeclock-fill" w={12.2625} h={12.2625} dx={0.87} dy={0.87} light={filled} />
+    ) : kind === "meal" ? (
+      <Marker key={`meal-${cx}`} cx={cx} src="rice-bowl-filled" w={12.833} h={12.833} dx={0.583} dy={0.583} light />
+    ) : (
+      <Marker key={`break-${cx}`} cx={cx} src="coffee-sm" w={12.8568} h={12.2687} dx={0.58} dy={0.857} light />
+    ),
+}
+
+export function ShiftTimelineStatic({
+  config: live,
+  labelSize = 13.5,
+  track = WIRE,
+  skin = WIRE_SKIN,
+  labels = true,
+}: {
+  config: TimelineConfig
+  labelSize?: number
+  /** The geometry to draw on (wireframe by default; the hi-fi passes HIFI). */
+  track?: Track
+  skin?: TimelineSkin
+  /** The start / end times under the track. Off when the layout draws its own. */
+  labels?: boolean
+}) {
   const maskId = useId()
+  const { g, CAP_R, CUT, CY, END_CUT, END_X, JOIN_COVERED, START_X, joinPath, layout } = track
   // Drawn as of the last update, not the live minute.
   const config = { ...live, now: updatedAt(live) }
   const phase = phaseOf(config)
@@ -81,12 +107,14 @@ export function ShiftTimelineStatic({ config: live, labelSize }: { config: Timel
   if (phase.kind === "empty") {
     return (
       <div className="flex w-full flex-col gap-[2px]" data-phase="empty">
-        <svg width={TRACK.width} height={TRACK.height} viewBox={`0 0 ${TRACK.width} ${TRACK.height}`} className="overflow-visible" aria-hidden>
-          <rect x={0} y={TRACK.barTop} width={TRACK.width} height={TRACK.barHeight} rx={CAP_R} fill={TRACK_FILL} />
+        <svg width={g.width} height={g.height} viewBox={`0 0 ${g.width} ${g.height}`} className="overflow-visible" aria-hidden>
+          <rect x={0} y={g.barTop} width={g.width} height={g.barHeight} rx={CAP_R} style={{ fill: skin.track }} />
         </svg>
-        <div aria-hidden className="font-bold" style={labelStyle}>
-          {" "}
-        </div>
+        {labels && (
+          <div aria-hidden className="font-bold" style={labelStyle}>
+            {" "}
+          </div>
+        )}
       </div>
     )
   }
@@ -102,27 +130,27 @@ export function ShiftTimelineStatic({ config: live, labelSize }: { config: Timel
 
   return (
     <div className="flex w-full flex-col gap-[2px]" data-phase={phase.kind} data-updated={config.now ?? undefined}>
-      <div className="relative h-[26px] w-[357px]">
+      <div className="relative" style={{ width: g.width, height: g.height }}>
         <svg
-          width={TRACK.width}
-          height={TRACK.height}
-          viewBox={`0 0 ${TRACK.width} ${TRACK.height}`}
+          width={g.width}
+          height={g.height}
+          viewBox={`0 0 ${g.width} ${g.height}`}
           className="absolute inset-0 overflow-visible"
           aria-hidden
         >
           <defs>
             {/* White keeps, black cuts: the gap before each break's bulge and at its bar's end, with
                 round caps put back by white circles. Finished, the gaps are closed. */}
-            <mask id={maskId} maskUnits="userSpaceOnUse" x={-4} y={-4} width={TRACK.width + 8} height={TRACK.height + 8}>
-              <rect x={-4} y={-4} width={TRACK.width + 8} height={TRACK.height + 8} fill="white" />
+            <mask id={maskId} maskUnits="userSpaceOnUse" x={-4} y={-4} width={g.width + 8} height={g.height + 8}>
+              <rect x={-4} y={-4} width={g.width + 8} height={g.height + 8} fill="white" />
               {!complete &&
                 checkpoints.map(({ event, x, cut }) => (
                   <g key={event.id} data-gap={event.id}>
-                    <rect x={x - CUT} y={-4} width={CUT} height={TRACK.height + 8} fill="black" />
+                    <rect x={x - CUT} y={-4} width={CUT} height={g.height + 8} fill="black" />
                     <circle cx={x - CUT} cy={CY} r={CAP_R} fill="white" />
                     {cut !== null && (
                       <>
-                        <rect x={cut} y={-4} width={END_CUT} height={TRACK.height + 8} fill="black" />
+                        <rect x={cut} y={-4} width={END_CUT} height={g.height + 8} fill="black" />
                         <circle cx={cut} cy={CY} r={CAP_R} fill="white" />
                         <circle cx={cut + END_CUT} cy={CY} r={CAP_R} fill="white" />
                       </>
@@ -132,8 +160,12 @@ export function ShiftTimelineStatic({ config: live, labelSize }: { config: Timel
             </mask>
           </defs>
 
-          <g fill={TRACK_FILL} mask={`url(#${maskId})`}>
-            <TrackShape startX={START_X} endX={END_X} />
+          <g style={{ fill: skin.track }} mask={`url(#${maskId})`}>
+            <circle cx={START_X} cy={CY} r={g.r} />
+            <path d={joinPath(START_X, 1)} />
+            <rect x={START_X} y={g.barTop} width={END_X - START_X} height={g.barHeight} />
+            <path d={joinPath(END_X, -1)} />
+            <circle cx={END_X} cy={CY} r={g.r} />
             {checkpoints.map(({ event, x }) => (
               <path key={event.id} d={joinPath(x, 1)} />
             ))}
@@ -141,20 +173,20 @@ export function ShiftTimelineStatic({ config: live, labelSize }: { config: Timel
 
           {/* Elapsed time, as of the last update: a bar-height pill with a round leading end. */}
           {started && (
-            <g fill={PROGRESS_FILL} mask={`url(#${maskId})`} data-progress={fillTo.toFixed(2)}>
-              <circle cx={START_X} cy={CY} r={TRACK.r} />
+            <g style={{ fill: skin.progress }} mask={`url(#${maskId})`} data-progress={fillTo.toFixed(2)}>
+              <circle cx={START_X} cy={CY} r={g.r} />
               {fillTo - START_X >= JOIN_COVERED && <path d={joinPath(START_X, 1)} />}
               <rect
                 x={START_X}
-                y={TRACK.barTop}
+                y={g.barTop}
                 width={fillTo - START_X}
-                height={TRACK.barHeight}
+                height={g.barHeight}
                 rx={Math.min(CAP_R, (fillTo - START_X) / 2)}
               />
               {done && (
                 <>
                   <path d={joinPath(END_X, -1)} />
-                  <circle cx={END_X} cy={CY} r={TRACK.r} />
+                  <circle cx={END_X} cy={CY} r={g.r} />
                 </>
               )}
               {checkpoints.map(({ event, x }) => (
@@ -166,28 +198,24 @@ export function ShiftTimelineStatic({ config: live, labelSize }: { config: Timel
           )}
 
           {checkpoints.map(({ event, x }) => (
-            <circle key={event.id} data-checkpoint-bulge={event.kind} cx={x} cy={CY} r={TRACK.r} fill={PROGRESS_FILL} />
+            <circle key={event.id} data-checkpoint-bulge={event.kind} cx={x} cy={CY} r={g.r} style={{ fill: skin.progress }} />
           ))}
           {dots.map(({ e, x }) => (
-            <circle key={e.id} data-event={e.kind} cx={x} cy={CY} r={DOT_R} fill={INK} />
+            <circle key={e.id} data-event={e.kind} cx={x} cy={CY} r={g.dotR} style={{ fill: skin.dot }} />
           ))}
         </svg>
 
-        {/* Figma's filled Timeclock (Timekeeping Iconography 106:7134) at both ends; coffee and the rice bowl on breaks. */}
-        <Marker cx={START_X} src="timeclock-fill" w={12.2625} h={12.2625} dx={0.87} dy={0.87} light={started} />
-        {checkpoints.map(({ event, x }) =>
-          event.kind === "meal" ? (
-            <Marker key={event.id} cx={x} src="rice-bowl-filled" w={12.833} h={12.833} dx={0.583} dy={0.583} light />
-          ) : (
-            <Marker key={event.id} cx={x} src="coffee-sm" w={12.8568} h={12.2687} dx={0.58} dy={0.857} light />
-          ),
-        )}
-        <Marker cx={END_X} src="timeclock-fill" w={12.2625} h={12.2625} dx={0.87} dy={0.87} light={done} />
+        {/* The clock at both ends; coffee and the rice bowl on breaks. */}
+        {skin.marker("clock", START_X, started)}
+        {checkpoints.map(({ event, x }) => skin.marker(event.kind === "meal" ? "meal" : "break", x, true))}
+        {skin.marker("clock", END_X, done)}
       </div>
-      <div className="flex w-full items-center justify-between whitespace-nowrap font-bold" style={labelStyle}>
-        <p>{clockTime(config.shiftStart)}</p>
-        <p>{clockTime(config.shiftEnd)}</p>
-      </div>
+      {labels && (
+        <div className="flex w-full items-center justify-between whitespace-nowrap font-bold" style={labelStyle}>
+          <p>{clockTime(config.shiftStart)}</p>
+          <p>{clockTime(config.shiftEnd)}</p>
+        </div>
+      )}
     </div>
   )
 }

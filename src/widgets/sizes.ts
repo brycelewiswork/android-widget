@@ -11,6 +11,21 @@ export const WIDGET_SIZES = {
 
 export type WidgetSize = keyof typeof WIDGET_SIZES
 
+/**
+ * The hi-fi sizes, from the Figma component set "Widget" (Android---iOS-Widgets
+ * 103:1800, Documentation page) — the source of truth now. The wireframes keep
+ * the earlier frames above.
+ */
+export const HIFI_SIZES: Record<WidgetSize, { width: number; height: number; figmaNode: string }> = {
+  "2x2": { width: 176, height: 224, figmaNode: "104:8085" },
+  "4x1": { width: 368, height: 104, figmaNode: "104:8257" },
+  "4x2": { width: 368, height: 224, figmaNode: "103:1799" },
+  "4x3": { width: 368, height: 344, figmaNode: "107:8467" },
+}
+
+/** A size's dimensions at a fidelity. */
+export const sizeAt = (size: WidgetSize, fidelity: "wireframe" | "hifi") => (fidelity === "hifi" ? HIFI_SIZES : WIDGET_SIZES)[size]
+
 export const WIDGET_SIZE_ORDER = Object.keys(WIDGET_SIZES) as WidgetSize[]
 
 /** "4x2" → "4 × 2" for display. */

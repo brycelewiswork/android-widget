@@ -44,26 +44,26 @@ const VARIATIONS: readonly FlowStep[] = [
   {
     state: "break-nudge",
     label: "Meal reminder",
-    copy: { lead: "Time for your meal?", primary: TAKE_MEAL, alt: TAKE_BREAK },
+    copy: { lead: "Time for your meal?", primary: TAKE_MEAL, alt: TAKE_BREAK, compactStyle: "pair", compactIcons: ["coffee", "meal"] },
     day: { now: at(15), taken: { b1: at(11, 31) }, breakEnds: { b1: at(11, 46) } },
   },
   // The last ask: the 10m before it stops fitting (30–40m left for a break, 45–55m for a meal).
   {
     state: "break-nudge",
     label: "Second reminder (last chance)",
-    copy: { sub: "Last chance, 40m left", primary: TAKE_BREAK, alt: undefined, compactIcons: ["coffee"] },
+    copy: { lead: "Take a break?", sub: "Last chance, 40m left", primary: TAKE_BREAK, alt: undefined, compactStyle: "primary" },
     day: { now: at(16, 20), taken: { b1: at(11, 31), m1: at(13) }, breakEnds: { b1: at(11, 46), m1: at(13, 30) } },
   },
   // The first minute of a break or meal: a send-off instead of the countdown.
-  { state: "break", label: "Break sent off", copy: { lead: "Enjoy your break", value: "", sub: "Back by 11:46 am" }, day: { now: at(11, 31) } },
+  { state: "break", label: "Break sent off", copy: { lead: "Enjoy your break", value: "", sub: "back by 11:46 am" }, day: { now: at(11, 31) } },
   {
     state: "break",
     label: "Meal countdown",
-    copy: { lead: "Meal ends in", value: "25m", sub: "Back by 1:30 pm", primary: END_MEAL },
+    copy: { lead: "Meal ends in", value: "25m", sub: "back by 1:30 pm", primary: END_MEAL },
     day: { now: at(13, 5), taken: { b1: at(11, 31), m1: at(13) }, breakEnds: { b1: at(11, 46) } },
   },
   // Due back: it doesn't end itself, so it says when it was due.
-  { state: "break", label: "Break due", copy: { lead: "Break's over", value: "", sub: "Back by 11:46 am" }, day: { now: at(11, 46) } },
+  { state: "break", label: "Break due", copy: { lead: "Break's over", value: "", sub: "back by 11:46 am" }, day: { now: at(11, 46) } },
   { state: "break", label: "Break overdue", copy: { lead: "Break ended", value: "5m", trail: "ago", sub: "Due back at 11:46 am" }, day: { now: at(11, 51) } },
   // The minute the shift's planned end arrives, still clocked in.
   { state: "overtime", label: "Time to clock out", copy: { lead: "Time to clock out", value: "", trail: undefined, sub: "Shift ended at 5:00 pm" }, day: { now: at(17) } },
@@ -130,7 +130,7 @@ export const FLOWS: readonly Flow[] = [
         state: "clocked-in",
         via: "Connection lost",
         label: "On the clock, offline",
-        copy: { sub: "Offline · updated 3:12 pm" },
+        copy: { sub: "Offline • updated 3:12 pm" },
       },
       { state: "clocked-in", via: "Back online" },
     ],
