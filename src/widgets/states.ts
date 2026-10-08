@@ -228,7 +228,7 @@ const STATES: Record<WidgetStateId, StateDef> = {
   break: {
     lead: "Break ends in",
     value: "12m",
-    sub: "Back by 11:46 pm",
+    sub: "Back by 11:46 am",
     timeline: true,
     // On a break there's one thing to do: on the 2×2, clock-in's move in reverse —
     // Message leaves and the primary fills the row as End break.

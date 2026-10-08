@@ -28,23 +28,23 @@ export const ROTATING: Partial<Record<WidgetStateId, RotatingSpec>> = {
     fallback: [
       "Finish line in sight",
       "Home stretch",
-      "Almost there!",
-      "You've earned this",
+      "Almost there",
+      "Bringing it home",
       "Nearly off the clock",
       "Look at you go",
-      "Last lap!",
+      "Last lap",
       "Great work today",
-      "Wrap it up, legend",
+      "Solid day's work",
       "Clocking out soon",
-      "Snacks await",
-      "Big finish energy",
+      "Strong finish ahead",
+      "Nearly done",
     ],
   },
 }
 
 const SYSTEM = `You write microcopy for Homebase, a scheduling and time-clock app for hourly workers. The copy is the subtitle line on an Android home-screen widget, under a headline that already states the facts (for example "Shift ends in 15m").
 
-Write lines that make the moment feel warm and a little playful. Keep each one at most ${MAX_SUBTITLE_CHARS} characters including spaces, because it must fit one line on the smallest widget. Use sentence case, no emoji, no surrounding quotes, and no trailing period (an exclamation mark is fine occasionally). Stay kind: no sarcasm, no guilt, nothing about pay, managers, or being tired of work. Keep the association with work positive: celebrate and reward the effort they put in, but never suggest work drains them or is something to get away from — no freedom, escape, release, recovering, collapsing on the couch, or "survived it". Make the lines varied in structure so a rotation through them never feels repetitive.`
+Write lines that make the moment feel warm and a little playful. Keep each one at most ${MAX_SUBTITLE_CHARS} characters including spaces, because it must fit one line on the smallest widget. Use sentence case, no emoji, no surrounding quotes, no trailing period, and no exclamation marks. Keep any humor dry and small — understatement, not hype (no "legend", no "energy", no cheerleading). Stay kind: no sarcasm, no guilt, nothing about pay, managers, or being tired of work. Keep the association with work positive: celebrate and reward the effort they put in, but never suggest work drains them or is something to get away from — no freedom, escape, release, recovering, collapsing on the couch, or "survived it". Make the lines varied in structure so a rotation through them never feels repetitive.`
 
 const SCHEMA = {
   type: "object",

@@ -15,17 +15,72 @@ export type FlowStep = {
   label?: string
   /** Copy on top of the state's default (the offline subtitle). */
   copy?: Partial<StateContent>
+  /** The timeline's day on top of the state's own (see demoTimeline), when the step is a different moment. */
+  day?: Partial<TimelineConfig>
 }
 export type Flow = { id: string; label: string; note: string; steps: readonly FlowStep[]; arrows?: boolean }
+
+const at = (h: number, m = 0) => h * 60 + m
+const TAKE_BREAK = { icon: "coffee", label: "Take break" } as const
+const TAKE_MEAL = { icon: "meal", label: "Take meal" } as const
+const END_MEAL = { icon: "timeclock", label: "End meal" } as const
+
+/**
+ * The live widget's moments the states' defaults don't show (src/widgets/live.ts),
+ * each on a 9-to-5 with the morning break at 11:31 and lunch at 1.
+ */
+const VARIATIONS: readonly FlowStep[] = [
+  // At the start time, not clocked in: words instead of "0m".
+  { state: "upcoming", label: "Shift starts now", copy: { lead: "Shift starts now", value: "", trail: undefined }, day: { now: at(8, 59) } },
+  { state: "upcoming", label: "Late to clock in", copy: { lead: "Shift started", value: "10m", trail: "ago" }, day: { now: at(8, 59) } },
+  // The first 15m on the clock: a greeting for the time of day instead of the count.
+  {
+    state: "clocked-in",
+    label: "Welcome",
+    copy: { lead: "Morning, you're in", value: "", sub: "Clocked in at 9:02 am" },
+    day: { now: at(9, 10), taken: {}, breakEnds: {} },
+  },
+  // The first ask, when the one left is the meal: it goes first.
+  {
+    state: "break-nudge",
+    label: "Meal reminder",
+    copy: { lead: "Time for your meal?", primary: TAKE_MEAL, alt: TAKE_BREAK },
+    day: { now: at(15), taken: { b1: at(11, 31) }, breakEnds: { b1: at(11, 46) } },
+  },
+  // The last ask: the 10m before it stops fitting (30–40m left for a break, 45–55m for a meal).
+  {
+    state: "break-nudge",
+    label: "Second reminder (last chance)",
+    copy: { sub: "Last chance, 40m left", primary: TAKE_BREAK, alt: undefined, compactIcons: ["coffee"] },
+    day: { now: at(16, 20), taken: { b1: at(11, 31), m1: at(13) }, breakEnds: { b1: at(11, 46), m1: at(13, 30) } },
+  },
+  // The first minute of a break or meal: a send-off instead of the countdown.
+  { state: "break", label: "Break sent off", copy: { lead: "Enjoy your break", value: "", sub: "Back by 11:46 am" }, day: { now: at(11, 31) } },
+  {
+    state: "break",
+    label: "Meal countdown",
+    copy: { lead: "Meal ends in", value: "25m", sub: "Back by 1:30 pm", primary: END_MEAL },
+    day: { now: at(13, 5), taken: { b1: at(11, 31), m1: at(13) }, breakEnds: { b1: at(11, 46) } },
+  },
+  // Due back: it doesn't end itself, so it says when it was due.
+  { state: "break", label: "Break due", copy: { lead: "Break's over", value: "", sub: "Back by 11:46 am" }, day: { now: at(11, 46) } },
+  { state: "break", label: "Break overdue", copy: { lead: "Break ended", value: "5m", trail: "ago", sub: "Due back at 11:46 am" }, day: { now: at(11, 51) } },
+  // The minute the shift's planned end arrives, still clocked in.
+  { state: "overtime", label: "Time to clock out", copy: { lead: "Time to clock out", value: "", trail: undefined, sub: "Shift ended at 5:00 pm" }, day: { now: at(17) } },
+  // Next shift 2+ days out: the weekday instead of "tomorrow".
+  { state: "off", label: "Off until a weekday", copy: { lead: "Off until Sunday" } },
+]
 
 export const FLOWS: readonly Flow[] = [
   {
     id: "shift",
     label: "Shift day",
-    note: "A shift from start to finish: clock in, take a break, wrap up, clock out.",
+    note: "A shift from start to finish: clock in (the button spins while it waits on the server), take a break, wrap up, clock out.",
     steps: [
       { state: "upcoming" },
-      { state: "clocked-in", via: "Clock in" },
+      // A tapped button waits on the server: its icon becomes a spinner until the action lands.
+      { state: "upcoming", via: "Tap Clock In", label: "Clocking in", copy: { busy: "timeclock" } },
+      { state: "clocked-in", via: "Confirmed" },
       { state: "break", via: "Take break" },
       { state: "clocked-in", via: "End break" },
       { state: "ending", via: "Last hour" },
@@ -97,6 +152,13 @@ export const FLOWS: readonly Flow[] = [
     ],
   },
   {
+    id: "variations",
+    label: "Variations",
+    note: "Copy the live widget swaps in at particular moments, on top of each state's default. Timings are for Calm.",
+    steps: VARIATIONS,
+    arrows: false,
+  },
+  {
     id: "all",
     label: "All states",
     note: "Every state, with its default copy.",
@@ -110,7 +172,6 @@ export const FLOWS: readonly Flow[] = [
 // state's default copy describes, so the 4×2 / 4×3 tracks show that part of
 // the day — progress, the breaks taken by then, the finished track.
 
-const at = (h: number, m = 0) => h * 60 + m
 /** Morning break 11:00–11:15 and lunch 1:00–1:30, taken on time. */
 const MORNING = { taken: { b1: at(11), m1: at(13) }, breakEnds: { b1: at(11, 15), m1: at(13, 30) } }
 /** …and the afternoon break, 3:00–3:15. */
@@ -133,6 +194,6 @@ const DAYS: Partial<Record<WidgetStateId, Partial<TimelineConfig>>> = {
 }
 
 /** The timeline a state's documentation draws (the planned 9-to-5 for states with no day of their own). */
-export function demoTimeline(state: WidgetStateId): TimelineConfig {
-  return { ...presetConfig("planned"), ...DAYS[state] }
+export function demoTimeline(state: WidgetStateId, day?: Partial<TimelineConfig>): TimelineConfig {
+  return { ...presetConfig("planned"), ...DAYS[state], ...day }
 }

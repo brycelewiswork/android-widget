@@ -35,7 +35,7 @@ function TopBar() {
   const { fidelity, setFidelity, showBounds, setShowBounds } = useWidgetStore()
   return (
     <header className="sticky top-0 z-10 border-b border-stroke-faint bg-surface-secondary/85 backdrop-blur-lg">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-6">
+      <div className="flex flex-wrap items-center justify-center gap-3 px-4 py-3 md:px-6">
         <nav className="flex gap-1 overflow-x-auto rounded-xl bg-fill-quaternary p-1" aria-label="Widget sizes">
           {TABS.map((t) => {
             const active = pathname === t.to
@@ -82,7 +82,7 @@ function FallbackNote({ sizes }: { sizes: WidgetSize[] }) {
   const missing = sizes.filter((size) => !hasLayout(fidelity, size))
   if (missing.length === 0) return null
   return (
-    <p className="mb-6 w-fit rounded-lg bg-surface-secondary px-3 py-2 text-sm text-label-secondary shadow-xs">
+    <p className="mx-auto mb-6 w-fit rounded-lg bg-surface-secondary px-3 py-2 text-sm text-label-secondary shadow-xs">
       No hi-fi version yet for {missing.map(sizeLabel).join(", ")}. Showing the wireframe instead.
     </p>
   )
@@ -102,8 +102,10 @@ export function Page({ sizes, children, panel }: {
       <div className={`flex min-h-svh flex-col ${panel ? "lg:pr-72" : ""}`}>
         <TopBar />
         <main className="widget-canvas flex-1 px-4 py-[var(--space-m-l)] md:px-[var(--space-m-l)]">
-          <FallbackNote sizes={sizes} />
-          {children}
+          <div className="mx-auto w-full max-w-6xl">
+            <FallbackNote sizes={sizes} />
+            {children}
+          </div>
         </main>
         {panel}
       </div>

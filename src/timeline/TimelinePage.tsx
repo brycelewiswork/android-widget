@@ -25,7 +25,7 @@ import {
   type Phase,
   type TimelineConfig,
 } from "./model"
-import { ShiftTimeline } from "./ShiftTimeline"
+import { ShiftTimelineStatic } from "./ShiftTimelineStatic"
 import { ShiftTimelineV2 } from "./ShiftTimelineV2"
 
 /*
@@ -75,12 +75,12 @@ function phaseLabel(phase: Phase) {
 }
 
 /**
- * The Figma meal glyph ("donut", Timekeeping Iconography 106:6971) drawn
+ * The Figma meal glyph ("rice-bowl", Timekeeping Iconography 139:2987) drawn
  * through a mask so it takes the text colour, like the Tabler icons beside it.
  * The art is 22 of the 24px frame, hence the inset.
  */
 export function MealIcon({ size, className = "" }: { size: number; className?: string }) {
-  const mask = `url("${import.meta.env.BASE_URL}widget/donut.svg") center / contain no-repeat`
+  const mask = `url("${import.meta.env.BASE_URL}widget/rice-bowl.svg") center / contain no-repeat`
   return (
     <span aria-hidden className={`inline-flex shrink-0 items-center justify-center ${className}`} style={{ width: size, height: size }}>
       <span className="block bg-current" style={{ width: (size * 22) / 24, height: (size * 22) / 24, mask, WebkitMask: mask }} />
@@ -328,7 +328,7 @@ const TRACK_BLOCK = { width: 357, height: 49 }
 
 /** The track enlarged for inspection, fitted to the canvas (up to 2×). The widgets below are 1:1. */
 function ZoomedTrack({ config, version }: { config: TimelineConfig; version: TimelineVersionId }) {
-  const Track = version === 2 ? ShiftTimelineV2 : ShiftTimeline
+  const Track = version === "animated" ? ShiftTimelineV2 : ShiftTimelineStatic
   const [ref, bounds] = useMeasure()
   const zoom = bounds.width ? Math.min(MAX_ZOOM, (bounds.width - PAD * 2) / TRACK_BLOCK.width) : MAX_ZOOM
   return (
@@ -347,8 +347,11 @@ function ZoomedTrack({ config, version }: { config: TimelineConfig; version: Tim
   )
 }
 
-/** `version` picks the timeline drawing: the original, or version 2 (/timeline-2). Same data either way. */
-export function TimelinePage({ version = 1 }: { version?: TimelineVersionId }) {
+/**
+ * `version` picks the timeline drawing: the static one the widgets use (/timeline),
+ * or the animated Timeline 2 reference (/timeline-2). Same data either way.
+ */
+export function TimelinePage({ version = "static" }: { version?: TimelineVersionId }) {
   const config = useTimelineStore((s) => s.config)
   const { fidelity, showBounds } = useWidgetStore()
   const phase = phaseOf(config)
@@ -360,7 +363,7 @@ export function TimelinePage({ version = 1 }: { version?: TimelineVersionId }) {
       <div className="flex flex-col gap-[var(--space-m-l)]">
         <section className="flex flex-col gap-3">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h1 className="text-sm font-semibold text-label">{version === 2 ? "Shift timeline, version 2" : "Shift timeline"}</h1>
+            <h1 className="text-sm font-semibold text-label">{version === "animated" ? "Shift timeline 2 (animated reference)" : "Shift timeline"}</h1>
             <span className="text-sm text-label-secondary">
               {phaseLabel(phase)}
               {next && ` · next at ${clockTime(next.start)}`}
@@ -396,4 +399,4 @@ export function TimelinePage({ version = 1 }: { version?: TimelineVersionId }) {
   )
 }
 
-export const TimelineV2Page = () => <TimelinePage version={2} />
+export const TimelineV2Page = () => <TimelinePage version="animated" />

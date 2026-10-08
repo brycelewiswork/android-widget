@@ -113,7 +113,7 @@ export const GAPS: Gap[] = [
     id: "clock-in-fails",
     title: "When a tap doesn't go through",
     detail:
-      "A tapped button now spins while it waits on the server, but the prototype always succeeds. A clock-in that fails must say so (“Couldn't clock in. Tap to try again.”) — otherwise someone believes they're on the clock when they aren't.",
+      "A tapped button spins while it waits on the server (documented in the Shift day flow), but nothing shows what happens when it fails. A clock-in that fails must say so (“Couldn't clock in. Tap to try again.”) — otherwise someone believes they're on the clock when they aren't.",
     status: "open",
     needs: "Design",
     source: "Design work",
@@ -135,6 +135,25 @@ export const GAPS: Gap[] = [
     status: "open",
     needs: "Design: where it earns its space",
     source: "Today's widget: “Good morning, Jane”",
+  },
+
+  {
+    id: "prototype-motion",
+    title: "Motion in the prototype that Android can't do",
+    detail:
+      "The widgets still roll their digits, crossfade text through a blur, slide their buttons between states, and move the buttons a beat after the timeline. None of it is buildable. Either keep it as clearly-labelled presentation polish, or switch it off so the prototype shows only what ships.",
+    status: "open",
+    needs: "Design: keep or strip",
+    source: "Engineering feedback, Oct 6",
+  },
+  {
+    id: "exact-or-calm",
+    title: "Calm steps vs a live ticking timer",
+    detail:
+      "Calm time counts in coarse steps so the widget doesn't pressure people. Android's built-in timer ticks every second on its own, and Keyvan wants an exact minute count. A ticking “On break for 08:12” is accurate and cheap to build, but it's the minute-by-minute pressure Calm was meant to avoid. Which states, if any, get a live timer?",
+    status: "open",
+    needs: "Design, with Keyvan",
+    source: "Engineering feedback, Oct 6",
   },
 
   // ── Hi-fi pass ──────────────────────────────────────────────────────────
@@ -205,13 +224,13 @@ export const GAPS: Gap[] = [
   {
     id: "timeline-2",
     area: "Timeline",
-    title: "Timeline 2 over Timeline 1",
+    title: "Breaks with their own bar — drawn static",
     detail:
-      "Timeline 1 marks a taken break as a single bulge on the bar, as if it were instant. Timeline 2 gives each break its own bar after its bulge — a fixed length per kind, filling over the break — then a second gap, and the shift's bar carries on.",
+      "Timeline 1 marked a taken break as a single bulge, as if it were instant. Timeline 2 gave each break its own bar after its bulge, then a second gap, then the shift's bar carrying on — and animated every change. Engineering (Oct 6): Android widgets are snapshots, so nothing can animate and a bar can't fill smoothly.",
     status: "decided",
     decision:
-      "Timeline 2 is live on every widget. A break has a start and an end, and the bar should show it: you can see how much break is left and where work resumes. Ending early shrinks the break's bar to the time it took; running over stretches it on End break (as far as there's room), and until then the overrun shows on the main bar. Timeline 1 stays at /timeline for reference.",
-    source: "Design work — compare the Timeline and Timeline 2 tabs",
+      "Timeline 2's design, drawn static, is the Timeline every widget uses. A break has a start and an end, so it gets its own bar; ending early or late resizes it to the time taken. The bar steps forward with each update (every 5 minutes in the prototype) and jumps straight away on an event — clock in, a break taken or ended, clock out. Timeline 1 is gone; the animated Timeline 2 stays as a reference.",
+    source: "Design work, and engineering's feedback on what Android widgets can do",
   },
   {
     id: "dots-not-times",
@@ -226,11 +245,11 @@ export const GAPS: Gap[] = [
   {
     id: "timeline-finish",
     area: "Timeline",
-    title: "Clocking out finishes the track",
+    title: "Clocking out shows the day finished",
     detail: "After clock-out the timeline could just stop where the time was.",
     status: "decided",
     decision:
-      "It finishes in three beats: the black runs to the end, the end bulge fills, then every gap closes from both sides (bulges and icons stay put) so the day reads as one solid piece. Unused break dots fade — they no longer apply.",
+      "The finished day is its own look: the whole track black, the end bulge filled, every gap closed (bulges and icons in place), unused break dots gone — one solid piece. Drawn as a state, not animated in.",
     source: "Design work",
   },
   {
@@ -239,7 +258,7 @@ export const GAPS: Gap[] = [
     title: "One timeclock glyph at both ends",
     detail: "The ends had separate clock-in / clock-out glyphs.",
     status: "decided",
-    decision: "Figma's filled Timeclock (Timekeeping Iconography 106:7134) at both ends: at 12px the arrows on the old glyphs couldn't be seen. Meals use the Figma donut.",
+    decision: "Figma's filled Timeclock (Timekeeping Iconography 106:7134) at both ends: at 12px the arrows on the old glyphs couldn't be seen. Meals use the Figma rice bowl (Timekeeping Iconography 104:6450): outline on buttons, filled on the timeline.",
     source: "Design work",
   },
   {
@@ -249,7 +268,7 @@ export const GAPS: Gap[] = [
     detail: "A countdown that ticks every minute before a shift, or a count-up on the clock, reads as pressure.",
     status: "decided",
     decision:
-      "Calm is the default: half hours far out, 15-minute steps on the clock, 5-minute steps as a moment gets close, exact only in the last 5 minutes. Countdowns round down, so the widget never promises more time than there is. Exact stays as a switch in the panel. It also suits how rarely Android widgets can refresh.",
+      "Calm is the default (being revisited — see “Calm steps vs a live ticking timer”): half hours far out, 15-minute steps on the clock, 5-minute steps as a moment gets close, exact only in the last 5 minutes. Countdowns round down, so the widget never promises more time than there is. Exact stays as a switch in the panel. It also suits how rarely Android widgets can refresh.",
     source: "Design work",
   },
   {
@@ -337,7 +356,8 @@ export const GAPS: Gap[] = [
     title: "Waiting on the server: a spinner in the button",
     detail: "A tap could show a separate “Clocking in…” state.",
     status: "decided",
-    decision: "The tapped button swaps its icon for a spinner until the action lands; no extra state.",
+    decision:
+      "The tapped button swaps its icon for a spinner until the action lands; no extra state. Shown as the “Clocking in” step of the Shift day flow; the prototype's own buttons act instantly.",
     source: "Design work",
   },
   {
@@ -361,22 +381,14 @@ export const GAPS: Gap[] = [
     source: "Design work",
   },
   {
-    id: "text-motion",
+    id: "android-motion",
     area: "Motion",
-    title: "Text changes: a light blur crossfade",
-    detail: "Heavy blur on swapping headlines looked like the text exploding.",
+    title: "What Android widgets can and can't animate",
+    detail:
+      "Engineering (Oct 6): a widget is a snapshot the app sends the home screen, frozen until the next one, and frequent updates drain the battery and get throttled.",
     status: "decided",
     decision:
-      "Old and new overlap. A light blur (4px) only ever seen on faint text: the leaving line fades faster than it softens, the arriving one sharpens as it brightens, with a 4px drift. Rolling numbers follow the same rule, and only the digits that change move.",
-    source: "Design work",
-  },
-  {
-    id: "timeline-then-buttons",
-    area: "Motion",
-    title: "Timeline first, then the buttons",
-    detail: "Taking a break changes both the track and the buttons.",
-    status: "decided",
-    decision: "The track moves first (gap opens, bulge pops); the buttons follow a beat later, so the eye goes to what happened and then to what's next. Within each, everything moves at once — no staggers.",
-    source: "Design work",
+      "Design within it. Can: a system timer that ticks by itself (“starts in 12:34”, “on break for 08:12”), a progress bar that steps on each update, and Android 12+'s launch animation into the app on tap. Can't: rolling digits, text crossfades, sliding buttons, a smoothly filling bar, or animated state changes — those are instant redraws.",
+    source: "Engineering feedback, Oct 6",
   },
 ]

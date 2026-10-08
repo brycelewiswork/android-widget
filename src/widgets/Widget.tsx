@@ -5,7 +5,7 @@ import { AnimatedNumber } from "@/components/ui/animated-number"
 import { DURATION, EASE, SPRING_FAST } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import type { Fidelity } from "@/store/useWidgetStore"
-import { ShiftTimeline } from "@/timeline/ShiftTimeline"
+import { ShiftTimelineStatic } from "@/timeline/ShiftTimelineStatic"
 import { ShiftTimelineV2 } from "@/timeline/ShiftTimelineV2"
 import { presetConfig, type TimelineConfig } from "@/timeline/model"
 import { HIFI, type WidgetLayout } from "./hifi"
@@ -31,9 +31,9 @@ const useLoading = () => useContext(Loading)
 /** The shift timeline config the 4×2 / 4×3 draw; set per widget via the `timeline` prop. */
 const DEFAULT_TIMELINE = presetConfig("planned")
 const Timeline = createContext<TimelineConfig>(DEFAULT_TIMELINE)
-/** Which timeline drawing the 4×2 / 4×3 use: the original, or version 2 (src/timeline/ShiftTimelineV2). */
-export type TimelineVersionId = 1 | 2
-const TimelineVersion = createContext<TimelineVersionId>(2)
+/** Which timeline drawing the 4×2 / 4×3 use: the static one Android can build (default), or the animated Timeline 2 reference. */
+export type TimelineVersionId = "static" | "animated"
+const TimelineVersion = createContext<TimelineVersionId>("static")
 
 function Bone({ className, style }: { className?: string; style?: CSSProperties }) {
   return (
@@ -91,8 +91,8 @@ const ICONS: Record<IconName, IconSpec> = {
   timeclock: { box: 24, w: 21.0218, h: 21.0218, src: { light: "timeclock-light", dark: "timeclock-dark" } },
   coffee: { box: 28, w: 25.7139, h: 24.5376, x: 1.163, y: 1.714, src: { light: "coffee-lg" } },
   message: { box: 24, w: 22, h: 21, src: { dark: "message" } },
-  // Figma "donut" (Timekeeping Iconography 106:6971): 22px art in a 24px frame, drawn as a mask so it takes either tone.
-  meal: { box: 24, w: 22, h: 22, src: { dark: "donut" } },
+  // Figma "rice-bowl" (Timekeeping Iconography 139:2987; outline, like the coffee cup): 22px art in a 24px frame, drawn as a mask so it takes either tone.
+  meal: { box: 24, w: 22, h: 22, src: { dark: "rice-bowl" } },
   xmark: { box: 24, w: 18.161, h: 18.1069, src: { dark: "xmark" } },
   login: { box: 24, w: 24, h: 24, tabler: IconLogin2 },
   calendar: { box: 24, w: 24, h: 24, tabler: IconCalendar },
@@ -262,6 +262,67 @@ const BUTTON_BEAT = DURATION.normal + DURATION.fast * 0.75
 /** How long after a timeline change the buttons still count it as theirs to follow. */
 const BEAT_WINDOW_MS = 900
 const ButtonDelay = createContext(0)
+/**
+ * What a widget button does when tapped, for widgets that act (the live one);
+ * documentation widgets leave it unset and their buttons stay inert. Buttons
+ * with nothing to simulate (Message, Schedule, Sign in) never act.
+ */
+export type WidgetAction = "clockIn" | "clockOut" | "takeBreak" | "takeMeal" | "endBreak"
+const OnAction = createContext<((action: WidgetAction) => void) | undefined>(undefined)
+const CurrentState = createContext<WidgetStateId>("upcoming")
+
+const ACTION_BY_LABEL: Record<string, WidgetAction> = {
+  "Clock In": "clockIn",
+  "Clock Out": "clockOut",
+  "Take break": "takeBreak",
+  Break: "takeBreak",
+  "Take meal": "takeMeal",
+  "End break": "endBreak",
+  "End meal": "endBreak",
+}
+
+/** Spoken names for the label-less 4×1 squares. */
+const ACTION_LABEL: Record<WidgetAction, string> = {
+  clockIn: "Clock in",
+  clockOut: "Clock out",
+  takeBreak: "Take a break",
+  takeMeal: "Take a meal",
+  endBreak: "End break",
+}
+/** A button that acts: pointer, a press that gives a little, and a focus ring. */
+const PRESSABLE =
+  "cursor-pointer transition-transform duration-150 ease-out active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--w-ink)]"
+
+/** The 4×1's icon squares carry no label: what each one does, by its icon and the state. */
+function compactAction(icon: IconName, state: WidgetStateId): WidgetAction | undefined {
+  if (icon === "coffee") return "takeBreak"
+  if (icon === "meal") return "takeMeal"
+  if (icon === "xmark") return "endBreak"
+  if (icon === "timeclock") return state === "upcoming" ? "clockIn" : state === "break" ? "endBreak" : "clockOut"
+  return undefined
+}
+
+/** Props that make a button element act on tap / Enter / Space — or nothing, when it has no action here. */
+function useActs(action: WidgetAction | undefined, label: string) {
+  const onAction = useContext(OnAction)
+  const loading = useLoading()
+  if (!onAction || !action || loading) return {}
+  const act = () => onAction(action)
+  return {
+    role: "button",
+    tabIndex: 0,
+    "aria-label": label,
+    onClick: act,
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault()
+        act()
+      }
+    },
+    "data-acts": action,
+  } as const
+}
+
 /** The button (by icon) waiting on the server — see StateContent.busy. */
 const Busy = createContext<IconName | undefined>(undefined)
 
@@ -315,12 +376,15 @@ function ActionButton({ action, dark, iconOnly, className, frame, appear, glide 
 }) {
   const loading = useLoading()
   const delay = useContext(ButtonDelay)
+  const acts = useActs(ACTION_BY_LABEL[action.label], action.label)
   const hidden = { opacity: 0, transform: "scale(0.9)", filter: `blur(${TEXT_BLUR}px)` }
   return (
     <motion.div
       data-fill
+      {...acts}
       className={cn(
         "flex h-12 shrink-0 items-center justify-center overflow-clip rounded-[16px]",
+        acts.role && PRESSABLE,
         frame ? "absolute top-0 px-2" : cn("relative", iconOnly ? "px-7 py-3" : "py-[11px] pr-5 pl-[14px]"),
         loading ? "bg-[var(--w-fill)] motion-safe:animate-pulse" : dark ? "bg-[var(--w-ink)]" : "bg-[var(--w-fill)]",
         className,
@@ -423,11 +487,16 @@ function WideButtonRow({ c, className, width }: { c: StateContent; className: st
 /** The 4×1's 48px square, icon centred on the Figma offset (50% − 0.46px). `dark` = black primary. */
 function CompactButton({ icon, dark }: { icon: IconName; dark?: boolean }) {
   const loading = useLoading()
+  const state = useContext(CurrentState)
+  const action = compactAction(icon, state)
+  const acts = useActs(action, ACTION_LABEL[action ?? "clockIn"])
   return (
     <div
       data-fill
+      {...acts}
       className={cn(
         "relative flex size-12 shrink-0 items-center justify-center overflow-clip rounded-[16px]",
+        acts.role && PRESSABLE,
         dark && !loading ? "bg-[var(--w-ink)]" : "bg-[var(--w-fill)]",
         loading && "motion-safe:animate-pulse",
       )}
@@ -445,7 +514,7 @@ function CompactButton({ icon, dark }: { icon: IconName; dark?: boolean }) {
 
 /** The shared shift timeline (src/timeline), or its skeleton while loading. */
 function TimelineSlot({ config, labelSize }: { config: TimelineConfig; labelSize: 13.5 | 16 }) {
-  const Track = useContext(TimelineVersion) === 2 ? ShiftTimelineV2 : ShiftTimeline
+  const Track = useContext(TimelineVersion) === "animated" ? ShiftTimelineV2 : ShiftTimelineStatic
   if (!useLoading()) return <Track config={config} labelSize={labelSize} />
   const labelLine = labelSize === 16 ? 21 : 17
   return (
@@ -614,16 +683,19 @@ export function Widget({
   sub,
   copy,
   timeline = DEFAULT_TIMELINE,
-  timelineVersion = 2,
+  timelineVersion = "static",
   fidelity = "wireframe",
   showBounds = false,
+  onAction,
   className,
 }: {
   size: WidgetSize
+  /** Makes the action buttons act (the live widget). Unset, they're inert. */
+  onAction?: (action: WidgetAction) => void
   state?: WidgetStateId
   /** The shift timeline the 4×2 / 4×3 draw. Defaults to the planned 9-to-5. */
   timeline?: TimelineConfig
-  /** Which timeline drawing to use. Defaults to version 2 (breaks with their own bar); /timeline still shows version 1. */
+  /** Which timeline drawing to use: "static" (what Android widgets can do — the default) or "animated" (the Timeline 2 reference). */
   timelineVersion?: TimelineVersionId
   /** Live minutes for timed states (the live widget passes them). Omit to show the default copy. */
   minutes?: number
@@ -651,6 +723,8 @@ export function Widget({
       aria-busy={content.loading || undefined}
     >
       <Loading.Provider value={!!content.loading}>
+        <OnAction.Provider value={onAction}>
+        <CurrentState.Provider value={state}>
         <Busy.Provider value={content.busy}>
         <Timeline.Provider value={timeline}>
           <TimelineVersion.Provider value={timelineVersion}>
@@ -659,6 +733,8 @@ export function Widget({
           </TimelineVersion.Provider>
         </Timeline.Provider>
         </Busy.Provider>
+        </CurrentState.Provider>
+        </OnAction.Provider>
       </Loading.Provider>
     </div>
   )

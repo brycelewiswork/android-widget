@@ -13,7 +13,7 @@ import { Page } from "./Shell"
 import { demoTimeline, FLOWS, type FlowStep } from "./flows"
 import { WIDGET_STATES } from "./states"
 import { useRotatingSubtitle, useSubtitleDriver } from "./subtitles"
-import { Widget } from "./Widget"
+import { Widget, type WidgetAction } from "./Widget"
 import { WIDGET_SIZES, WIDGET_SIZE_ORDER, sizeLabel, type WidgetSize } from "./sizes"
 
 // Home-screen placement inside the 410dp-wide screen. Widgets hug the launcher
@@ -72,7 +72,7 @@ export function AllWidgetsPage() {
     <Page sizes={WIDGET_SIZE_ORDER} panel={<LivePanel />}>
       <div className="grid gap-[var(--space-m-l)] sm:grid-cols-2">
         {PHONES.map((sizes) => (
-          <div key={sizes.join()} className="h-[min(990px,calc(100svh-7rem))] min-h-[480px]">
+          <div key={sizes.join()} className="flex h-[min(990px,calc(100svh-7rem))] min-h-[480px] justify-center">
             <PhoneHomeScreen sizes={sizes} />
           </div>
         ))}
@@ -83,9 +83,17 @@ export function AllWidgetsPage() {
 
 /** The widget as the worker lives it: driven by the time of day, clocking in and out, and breaks (right rail). */
 function LiveSpecimen({ size }: { size: WidgetSize }) {
-  const { fidelity, showBounds, precision, busy } = useWidgetStore()
+  const { fidelity, showBounds, precision } = useWidgetStore()
   const config = useTimelineStore((s) => s.config)
   const live = liveWidget(config, precision)
+  // Its buttons act, like the panel's.
+  const onAction = (action: WidgetAction) => {
+    const store = useTimelineStore.getState()
+    if (action === "clockIn") store.clockIn()
+    else if (action === "clockOut") store.clockOut()
+    else if (action === "endBreak") store.endBreak()
+    else store.take(action === "takeMeal" ? "meal" : "break")
+  }
   const sub = useRotatingSubtitle(live.state)
   return (
     <Widget
@@ -93,7 +101,8 @@ function LiveSpecimen({ size }: { size: WidgetSize }) {
       state={live.state}
       minutes={live.minutes}
       sub={sub}
-      copy={busy ? { ...live.copy, busy } : live.copy}
+      copy={live.copy}
+      onAction={onAction}
       timeline={live.timeline}
       fidelity={fidelity}
       showBounds={showBounds}
@@ -139,7 +148,7 @@ function FlowStepCard({ size, step }: { size: WidgetSize; step: FlowStep }) {
   return (
     <figure className="flex flex-col gap-2">
       <figcaption className="text-sm font-medium text-label">{step.label ?? WIDGET_STATES.find((s) => s.id === state)?.label}</figcaption>
-      <Widget size={size} state={state} copy={step.copy} timeline={demoTimeline(state)} fidelity={fidelity} showBounds={showBounds} />
+      <Widget size={size} state={state} copy={step.copy} timeline={demoTimeline(state, step.day)} fidelity={fidelity} showBounds={showBounds} />
     </figure>
   )
 }
