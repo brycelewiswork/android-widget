@@ -1,5 +1,6 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import type { PaletteId } from "@/widgets/hifi/palettes"
 
 /** Which design pass to render: the wireframes, or the hi-fi pass. */
 export type Fidelity = "wireframe" | "hifi"
@@ -12,13 +13,16 @@ type WidgetViewState = {
   /** Debug overlay: outline every box inside the widget. */
   showBounds: boolean
   precision: Precision
+  /** The hi-fi widget's Material 3 colour scheme. */
+  palette: PaletteId
   setFidelity: (fidelity: Fidelity) => void
   setShowBounds: (showBounds: boolean) => void
   setPrecision: (precision: Precision) => void
+  setPalette: (palette: PaletteId) => void
 }
 
 // Hi-fi by default: Figma is the source of truth now.
-const DEFAULTS = { fidelity: "hifi", showBounds: false, precision: "calm" } as const
+const DEFAULTS = { fidelity: "hifi", showBounds: false, precision: "calm", palette: "purple" } as const
 
 export const useWidgetStore = create<WidgetViewState>()(
   persist(
@@ -27,6 +31,7 @@ export const useWidgetStore = create<WidgetViewState>()(
       setFidelity: (fidelity) => set({ fidelity }),
       setShowBounds: (showBounds) => set({ showBounds }),
       setPrecision: (precision) => set({ precision }),
+      setPalette: (palette) => set({ palette }),
     }),
     {
       name: "android-widget:view",

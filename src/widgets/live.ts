@@ -127,8 +127,9 @@ function compactActions(config: TimelineConfig): Partial<StateContent> {
  */
 function shiftEndWidget(config: TimelineConfig, now: number, calm: boolean, working = false): LiveWidget | undefined {
   const left = config.shiftEnd - now
-  // Figma: near the end, an unused break comes along as the secondary action; with both kinds
-  // unused, they're icon squares (like Message) before Clock out.
+  // Figma ("Close to shift end"): in the last hour, an unused break comes along as the secondary
+  // action; with both kinds unused, they're icon squares (like Message) before Clock out. Past the
+  // end it's Clock out alone.
   const unused = working ? leftToTake(config) : []
   const extras: Partial<StateContent> =
     unused.length === 1 ? { alt: TAKE[unused[0]] } : unused.length > 1 ? { squares: unused.map((k) => TAKE[k].icon) } : {}
@@ -137,11 +138,11 @@ function shiftEndWidget(config: TimelineConfig, now: number, calm: boolean, work
     if (over < 1) {
       return {
         state: "overtime",
-        copy: { lead: "Time to clock out", value: "", trail: undefined, ticker: undefined, sub: `Shift ended at ${clockTime(config.shiftEnd)}`, ...extras },
+        copy: { lead: "Time to clock out", value: "", trail: undefined, ticker: undefined, sub: `Shift ended at ${clockTime(config.shiftEnd)}` },
         timeline: config,
       }
     }
-    return { state: "overtime", minutes: over, copy: extras, timeline: config }
+    return { state: "overtime", minutes: over, timeline: config }
   }
   if (left <= 60) return { state: "ending", minutes: calm ? calmEnding(Math.floor(left)) : Math.ceil(left), copy: extras, timeline: config }
   return undefined

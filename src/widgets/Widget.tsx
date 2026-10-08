@@ -4,11 +4,12 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { AnimatedNumber } from "@/components/ui/animated-number"
 import { DURATION, EASE, SPRING_FAST } from "@/lib/motion"
 import { cn } from "@/lib/utils"
-import type { Fidelity } from "@/store/useWidgetStore"
+import { useWidgetStore, type Fidelity } from "@/store/useWidgetStore"
 import { ShiftTimelineStatic } from "@/timeline/ShiftTimelineStatic"
 import { ShiftTimelineV2 } from "@/timeline/ShiftTimelineV2"
 import { presetConfig, type TimelineConfig } from "@/timeline/model"
 import { HIFI, type WidgetLayout } from "./hifi"
+import { paletteVars } from "./hifi/palettes"
 import { sizeAt, type WidgetSize } from "./sizes"
 import { contentFor, type Action, type IconName, type StateContent, type WidgetStateId } from "./states"
 import "./widget.css"
@@ -719,6 +720,7 @@ export function Widget({
   className?: string
 }) {
   const hifi = fidelity === "hifi" && !!HIFI[size]
+  const palette = useWidgetStore((s) => s.palette)
   const { width, height } = sizeAt(size, hifi ? "hifi" : "wireframe")
   const Layout = (hifi && HIFI[size]) || WIREFRAME[size]
   const base = contentFor(state, size, minutes)
@@ -726,8 +728,9 @@ export function Widget({
   return (
     <div
       className={cn("widget relative shrink-0 overflow-clip", hifi ? "widget-hifi rounded-[24px]" : "rounded-[28px]", className)}
-      style={{ width, height }}
+      style={{ width, height, ...(hifi && paletteVars(palette)) }}
       data-size={size}
+      data-palette={hifi ? palette : undefined}
       data-state={state}
       data-fidelity={fidelity}
       data-bounds={showBounds || undefined}

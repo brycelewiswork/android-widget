@@ -1,8 +1,11 @@
 import type { ReactNode } from "react"
 import { Link, useLocation } from "react-router-dom"
+import { useTheme } from "next-themes"
+import { IconMoon, IconSun } from "@tabler/icons-react"
 import { useTimelineDriver } from "@/store/useTimelineStore"
 import { useWidgetStore, type Fidelity } from "@/store/useWidgetStore"
 import { hasLayout } from "./hifi"
+import { PALETTE_IDS, PALETTES } from "./hifi/palettes"
 import { WIDGET_SIZE_ORDER, sizeLabel, type WidgetSize } from "./sizes"
 
 /*
@@ -29,6 +32,53 @@ const segment = (active: boolean) =>
   }`
 
 // ── Top bar ────────────────────────────────────────────────────────────────
+
+/** Light / dark for the whole page — the hi-fi widgets follow it (their dark scheme). */
+function ThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme()
+  const dark = resolvedTheme === "dark"
+  return (
+    <button
+      type="button"
+      onClick={() => setTheme(dark ? "light" : "dark")}
+      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+      title={dark ? "Light mode" : "Dark mode"}
+      className="flex size-9 cursor-pointer items-center justify-center rounded-xl bg-fill-quaternary text-label-secondary transition-colors hover:text-label focus-visible:outline-2 focus-visible:outline-label"
+    >
+      {dark ? <IconSun size={18} stroke={1.75} /> : <IconMoon size={18} stroke={1.75} />}
+    </button>
+  )
+}
+
+/** The hi-fi widget's Material 3 scheme: one swatch per palette, in its primary colour. */
+function PalettePicker() {
+  const { palette, setPalette } = useWidgetStore()
+  const { resolvedTheme } = useTheme()
+  const mode = resolvedTheme === "dark" ? "dark" : "light"
+  return (
+    <div role="radiogroup" aria-label="Material 3 palette" className="flex items-center gap-1 rounded-xl bg-fill-quaternary p-1.5">
+      {PALETTE_IDS.map((id) => {
+        const p = PALETTES[id]
+        const active = palette === id
+        return (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            aria-label={p.label}
+            title={p.label}
+            onClick={() => setPalette(id)}
+            className={`flex size-6 cursor-pointer items-center justify-center rounded-full transition-shadow focus-visible:outline-2 focus-visible:outline-label ${active ? "ring-2 ring-label" : ""}`}
+            style={{ background: p[mode].container }}
+          >
+            <span className="block size-3.5 rounded-full" style={{ background: p[mode].primary }} />
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
 function TopBar() {
   const { pathname } = useLocation()
@@ -61,6 +111,8 @@ function TopBar() {
               </button>
             ))}
           </div>
+          {fidelity === "hifi" && <PalettePicker />}
+          <ThemeToggle />
           <label className="flex cursor-pointer items-center gap-2 text-sm text-label-secondary select-none">
             <input
               type="checkbox"

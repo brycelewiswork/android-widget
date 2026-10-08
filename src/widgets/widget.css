@@ -93,15 +93,16 @@
  * (Android---iOS-Widgets, Documentation → "Color"): the surface is
  * palettes/secondary-95, text on-secondary-container, the number and primary
  * buttons primary, secondary buttons secondary-container; the 4×3's schedule
- * sits on 5% black with 15% black lines. Dark values from the Figma dark-mode
- * examples (surface #070215) and the M3 purple dark scheme.
+ * sits on 5% black with 15% black lines. The colours come from the chosen
+ * palette (./hifi/palettes.ts); purple is Figma's, light and dark.
  */
 .widget-hifi {
-  --h-surface: #f7edff;
-  --h-primary: #6b548d;
-  --h-on-primary: #ffffff;
-  --h-container: #ebddf7;
-  --h-on-container: #4c4357;
+  /* Light by default; the palette (./hifi/palettes.ts) sets --hl-* and --hd-* inline. */
+  --h-surface: var(--hl-surface, #f7edff);
+  --h-primary: var(--hl-primary, #6b548d);
+  --h-on-primary: var(--hl-on-primary, #ffffff);
+  --h-container: var(--hl-container, #ebddf7);
+  --h-on-container: var(--hl-on-container, #4c4357);
   --h-sheet: rgb(0 0 0 / 0.05);
   --h-line: rgb(0 0 0 / 0.15);
   --h-bone-dim: rgb(0 0 0 / 0.1);
@@ -110,11 +111,11 @@
   color: var(--h-on-container);
 }
 .dark .widget-hifi {
-  --h-surface: #070215;
-  --h-primary: #d6bbfb;
-  --h-on-primary: #3b255a;
-  --h-container: #4c4357;
-  --h-on-container: #ebddf7;
+  --h-surface: var(--hd-surface, #070215);
+  --h-primary: var(--hd-primary, #d6bbfb);
+  --h-on-primary: var(--hd-on-primary, #3b255a);
+  --h-container: var(--hd-container, #4c4357);
+  --h-on-container: var(--hd-on-container, #ebddf7);
   --h-sheet: rgb(255 255 255 / 0.05);
   --h-line: rgb(255 255 255 / 0.15);
   --h-bone-dim: rgb(255 255 255 / 0.1);
